@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { factsFrom, queue, questionFor, docId, factIdOf, plain, topicsOf } from '../src/facts.js';
+import { factsFrom, queue, questionFor, docId, factIdOf, plain, topicsOf } from '../src/cards.js';
 
 const FILES = [
   { area: 'drugs', topics: [

@@ -83,18 +83,18 @@ export const fixup = (rel, text, app) => rel === 'wrangler.jsonc' ? text.replace
 
 // the default look's colour (@core/theme) when --accent names none and config.js has none yet
 export const ACCENT = '#3a6390';
-const configJs = (app, web, accent) => `// The app's settings. tools/fill.mjs writes the name, host, kit and Firebase project here; --web-config adds the web
+const configJs = (app, web, accent, extra = {}) => `// The app's settings. tools/fill.mjs writes the name, host, kit and Firebase project here; --web-config adds the web
 // app's apiKey and appId (\`firebase apps:sdkconfig WEB\`). A public client config, not a secret: the Firestore rules
 // decide who sees what. Until apiKey is set the app runs only against the local emulators (?emulator on localhost).
 // accent: the default look's colour (@core/theme; boot.js), set with --accent.
-export const APP = ${JSON.stringify({ name: app.name, title: app.title, host: app.host, accent })};
+export const APP = ${JSON.stringify({ name: app.name, title: app.title, host: app.host, accent, ...extra })};
 export const KIT = '${KITS[app.kit]}/v1/';
 export const firebaseConfig = ${JSON.stringify(web, null, 2)};
 `;
-const staticConfigJs = (app, accent) => `// The app's settings. tools/fill.mjs writes the name, title, host and kit here. A static app has no Firebase project:
+const staticConfigJs = (app, accent, extra = {}) => `// The app's settings. tools/fill.mjs writes the name, title, host and kit here. A static app has no Firebase project:
 // its data stays on the device (local.js); \`node tools/add.mjs cloud --project <id>\` adds one.
 // accent: the default look's colour (@core/theme; boot.js), set with --accent.
-export const APP = ${JSON.stringify({ name: app.name, title: app.title, host: app.host, accent })};
+export const APP = ${JSON.stringify({ name: app.name, title: app.title, host: app.host, accent, ...extra })};
 export const KIT = '${KITS[app.kit]}/v1/';
 `;
 
@@ -126,7 +126,10 @@ export function fill({ dir = '.', check = false, static: flat = false, log = () 
   const before = fs.readFileSync(cfgPath, 'utf8');
   const kept = JSON.parse(before.match(/export const firebaseConfig = (\{[\s\S]*?\});/)?.[1] || '{}');
   // a kept colour that is the old kit's default follows a new kit to its own
-  const keptAccent = JSON.parse(before.match(/export const APP = (\{.*\});/)?.[1] || '{}').accent?.toLowerCase();
+  const keptApp = JSON.parse(before.match(/export const APP = (\{.*\});/)?.[1] || '{}');
+  const keptAccent = keptApp.accent?.toLowerCase();
+  // the app's own APP keys (a look, a surface) stay as they are
+  const extra = Object.fromEntries(Object.entries(keptApp).filter(([k]) => !['name', 'title', 'host', 'accent'].includes(k)));
   const kitDefault = kit => KIT_ACCENT[kit] ?? ACCENT;
   const accent = (opts.accent ?? (keptAccent && keptAccent !== kitDefault(old.kit) ? keptAccent : kitDefault(app.kit))).toLowerCase();
   if (!/^#[0-9a-f]{6}$/.test(accent)) throw new Error(`--accent '${accent}': a colour like #3a6390`);
@@ -163,7 +166,7 @@ export function fill({ dir = '.', check = false, static: flat = false, log = () 
     text = fixup(rel, text, app);
     write(rel, text);
   }
-  write('app/src/config.js', meta.flavour ? staticConfigJs(app, accent) : configJs(app, web, accent));
+  write('app/src/config.js', meta.flavour ? staticConfigJs(app, accent, extra) : configJs(app, web, accent, extra));
   const commit = opts.commit ?? meta.commit;   // the template commit this app started from (the new-app job passes it)
   // the template's own module recipes become the template's at that commit, so add.mjs has a pristine copy to compare
   const modules = meta.modules && commit ? Object.fromEntries(Object.entries(meta.modules).map(([m, s]) =>

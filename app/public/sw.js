@@ -20,6 +20,7 @@ const SHELL = [
   'manifest.webmanifest',
   'src/app.js',
   'src/boot.js',
+  'src/cards.js',
   'src/cloud.js',
   'src/config.js',
   'src/data-modules.js',

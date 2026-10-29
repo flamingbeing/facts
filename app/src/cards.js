@@ -1,8 +1,8 @@
-// The facts and their questions, and the order cards come in. Pure (no DOM, no network), so
-// app/test/facts.unit.test.mjs runs it in Node; data.js loads the files, screens/align.js shows the cards.
+// Each fact line and its questions, and the order cards come in. Pure (no DOM, no network), so
+// app/test/cards.unit.test.mjs runs it in Node; data.js loads the files, screens/align.js shows the cards.
 //
 // The data (anaesfacts' app/ folder, served at /data/ by worker/data.js): index.json = { areas: { <area>: { v, topics,
-// facts, questions } } }; <area>.json = { area, topics: [{ k, t, f: [[hash, section, text]], q: [[hash, kind, stem,
+// fact and question counts } } }; <area>.json = { area, topics: [{ k, t, f: [[hash, section, text]], q: [[hash, kind, stem,
 // answer, options?]] }] }. A fact's id is <area>/<topic>#<hash>; when its line changes, so does its id.
 
 export const AREAS = ['drugs', 'regional', 'airway', 'comorbidities', 'procedures', 'physiology', 'equipment', 'crises', 'other'];
@@ -48,16 +48,16 @@ export const factIdOf = id => { const [a, t, h] = id.split('~'); return `${a}/${
 export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen'];
 
 /**
- * The order cards come in: facts never seen first (those with a question before those without), then the ones seen
+ * The order cards come in: lines never seen first (those with a question before those without), then the ones seen
  * longest ago. A topic or area filter narrows it; a search too (topic title or fact text, every word).
- * @param {Fact[]} facts
+ * @param {Fact[]} list
  * @param {Map<string, number>} seenAt  fact id -> when he last answered it (verdicts' `at`)
  * @param {{ area?: string, topic?: string, search?: string }} [filter]
  * @returns {Fact[]}
  */
-export function queue(facts, seenAt, filter = {}) {
+export function queue(list, seenAt, filter = {}) {
   const words = (filter.search || '').toLowerCase().split(/\s+/).filter(Boolean);
-  const pick = facts.filter(f => (!filter.area || f.area === filter.area) && (!filter.topic || f.topic === filter.topic)
+  const pick = list.filter(f => (!filter.area || f.area === filter.area) && (!filter.topic || f.topic === filter.topic)
     && (!words.length || words.every(w => f.title.toLowerCase().includes(w) || f.text.toLowerCase().includes(w))));
   const never = pick.filter(f => !seenAt.has(f.id));
   const seen = pick.filter(f => seenAt.has(f.id)).sort((a, b) => /** @type {number} */ (seenAt.get(a.id)) - /** @type {number} */ (seenAt.get(b.id)));
@@ -78,9 +78,9 @@ export function questionFor(fact, turn = 0) {
 /** @param {string} s  the fact's own Markdown emphasis (**bold**) as plain text */
 export const plain = s => String(s).replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|\W)[*_](\S.*?\S|\S)[*_](?=\W|$)/g, '$1$2').replace(/`/g, '');
 
-/** @param {Fact[]} facts -> topics, by area then title: { topic, title, area } */
-export function topicsOf(facts) {
+/** @param {Fact[]} list -> topics, by area then title: { topic, title, area } */
+export function topicsOf(list) {
   const seen = new Map();
-  for (const f of facts) if (!seen.has(f.topic)) seen.set(f.topic, { topic: f.topic, title: f.title, area: f.area });
+  for (const f of list) if (!seen.has(f.topic)) seen.set(f.topic, { topic: f.topic, title: f.title, area: f.area });
   return [...seen.values()];
 }
