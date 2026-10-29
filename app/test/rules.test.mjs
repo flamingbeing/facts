@@ -79,6 +79,12 @@ test('verdicts: members write their own (by and the id are them, the id is the l
   assert.equal((await as('member').set(path, v('u-member', { q: 'x'.repeat(1001) }), at)).ok, false, 'q at most 1000');
   assert.equal((await as('admin').set('spaces/_/verdicts/u-admin~flag:F1', v('u-admin', { fact: 'flag:F1', choice: 'accept-fix' }), at)).ok, true);
   assert.equal((await as('admin').set('spaces/_/verdicts/u-admin~flag:F1', v('u-admin', { fact: 'flag:F1', choice: 'keep' }), at)).ok, true);
+  // the Add tab: choice add, fact add:<area>/<slug>#<time>, a section (at most 100)
+  const add = 'spaces/_/verdicts/u-admin~add:drugs~dobutamine~k1';
+  const addDoc = (extra = {}) => v('u-admin', { fact: 'add:drugs/dobutamine#k1', choice: 'add', text: 'A line', section: 'Dosage', ...extra });
+  assert.equal((await as('admin').set(add, addDoc(), at)).ok, true);
+  assert.equal((await as('admin').set(add, addDoc({ section: 'x'.repeat(101) }), at)).ok, false, 'section at most 100');
+  assert.equal((await as('admin').set(add, addDoc({ section: 5 }), at)).ok, false, 'section is a string');
   // the flush marks (worker/flush.js) are the Worker's alone
   assert.equal((await as('admin').get('flush/u-admin')).ok, false);
   assert.equal((await as('admin').set('flush/u-admin', { upto: 1 })).ok, false);

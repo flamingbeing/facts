@@ -18,7 +18,7 @@ import { DEFAULT_ADMINS } from './members.js';
 export const REPO = 'flamingbeing/anaesfacts-private';
 const API = `https://api.github.com/repos/${REPO}/contents/`;
 // the answers that ask for a change to the notes; agree, me-wrong and seen only move the mark
-export const ACTION = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep'];
+export const ACTION = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep', 'add'];
 const PAGE = 200, PAGES = 5;
 
 /** @param {any} token */
@@ -29,7 +29,7 @@ export const sgtDate = ms => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10
 
 /** a verdict doc as the queue keeps it: the line (or flag), his answer, the question he saw, when */
 /** @param {any} v */
-export const queueItem = v => ({ id: v.id, fact: v.fact, choice: v.choice, ...(v.text ? { text: v.text } : {}), ...(v.q ? { q: v.q } : {}), at: v.at });
+export const queueItem = v => ({ id: v.id, fact: v.fact, choice: v.choice, ...(v.text ? { text: v.text } : {}), ...(v.section ? { section: v.section } : {}), ...(v.q ? { q: v.q } : {}), at: v.at });
 
 /**
  * The pure part: from the verdicts since the mark, his actionable ones, merged into the day's file (no item twice:
