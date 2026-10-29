@@ -14,7 +14,7 @@ function fakeGithub(files = {}) {
   return { files, writes, read: async p => files[p] ? { sha: 's' + writes.length, json: structuredClone(files[p]) } : null,
     write: async (p, json, sha, msg) => { writes.push({ p, json, sha, msg }); files[p] = json; return true; } };
 }
-const ask = (path, who, deps, method = path === '/api/flags' ? 'GET' : 'POST') => handleFlush(new Request(ORIGIN + path, {
+const ask = (path, who, deps, method = path === '/api/flags' || path === '/api/queue' ? 'GET' : 'POST') => handleFlush(new Request(ORIGIN + path, {
   method, headers: who ? { Authorization: `Bearer ${who}` } : {} }), { verify, now: () => Date.parse('2026-10-29T10:00:00Z'), ...deps });
 
 test('flush: owner only (his verified email); others 403, no token 401', async () => {
@@ -106,4 +106,31 @@ test('the queue helpers', () => {
   assert.deepEqual(ACTION.includes('agree') || ACTION.includes('seen') || ACTION.includes('me-wrong'), false);
   assert.equal(mergeQueue([v('a', 'edit', 1)], 'own', { items: [{ id: 'a', at: 1 }] }).n, 0);
   assert.equal(flagCard({ id: 'F', kind: 'batch', topic: 't.md', line: 'l', note: 'n', confidence: 'low' }).topic, 't');
+});
+
+test('queue: owner only; the last 14 days newest first with queued / done (PR link or note) / held', async () => {
+  const T = d => Date.parse(d + 'T02:00:00Z');
+  const files = {
+    'queue/2026-10-29.json': { items: [{ id: 'u~a', fact: 'drugs/x#a', choice: 'edit', text: 'Made-up edit', at: T('2026-10-29') },
+      { id: 'u~b', fact: 'add:drugs/y#k', choice: 'add', text: 'Made-up line', section: 'Dosage', at: T('2026-10-29') + 5, held: 'line changed since' }] },
+    'queue/2026-10-20.json': { items: [{ id: 'u~c', fact: 'drugs/x#c', choice: 'repo-wrong', at: T('2026-10-20'), done: 'https://github.com/flamingbeing/anaesfacts/pull/9' },
+      { id: 'u~d', fact: 'wrong:drugs/x#d', choice: 'flag', at: T('2026-10-20') + 1, done: 'flagged F0012' }] },
+    'queue/2026-10-01.json': { items: [{ id: 'u~e', fact: 'drugs/x#e', choice: 'keep', at: T('2026-10-01'), done: 'kept' }] },
+  };
+  const github = { ...fakeGithub(files), names: async () => ['README.md', ...Object.keys(files).map(k => k.slice(6))] };
+  assert.equal((await ask('/api/queue', 'bob', { github })).status, 403);
+  assert.equal((await ask('/api/queue', '', { github })).status, 401);
+  assert.equal((await ask('/api/queue', 'own', { github }, 'POST')).status, 405);
+  const { items } = await (await ask('/api/queue', 'own', { github })).json();
+  assert.deepEqual(items.map(i => [i.fact, i.status]), [['add:drugs/y#k', 'held'], ['drugs/x#a', 'queued'], ['wrong:drugs/x#d', 'done'], ['drugs/x#c', 'done']]);
+  assert.equal(items[0].why, 'line changed since');
+  assert.equal(items[0].id, undefined);
+  assert.equal(items[2].note, 'flagged F0012');
+  assert.equal(items[3].pr, 'https://github.com/flamingbeing/anaesfacts/pull/9');
+  // GitHub down: 502, nothing leaks
+  const down = { names: async () => { throw new Error('github list 500'); } };
+  assert.equal((await ask('/api/queue', 'own', { github: down })).status, 502);
+  // local: the fixture
+  const local = await ask('/api/queue', 'own', { github: null, queueLocal: async () => [{ fact: 'a', choice: 'keep', at: T('2026-10-29') }] });
+  assert.deepEqual((await local.json()).items.map(i => i.status), ['queued']);
 });

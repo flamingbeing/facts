@@ -143,3 +143,8 @@ card (`ask.js` `askCard`, shared; Align's layout is unchanged), with the same ar
 - Tests: `e2e/test.spec.mjs` reuses `e2e/fixtures/data/` and `flags.json`. It clears recall docs and `wrong:` verdicts; Align's
   spec leaves `wrong:` verdicts alone because the two files run in different workers.
 - For the Log tab: `ask.js` (`el`, `ago`, `askCard`), `cards.js` (`flaggedIds`, `WRONG`, `RECALL`), `schedule.js`.
+
+## Log tab
+
+- `app/src/screens/log.js`: (1) his verdicts from sync, newest first; "Changes only" = the queue's ACTION choices, "All" adds agree, me-wrong and seen. The line text comes from the notes data (loaded on first open) when the verdict carries none. (2) Owner only: `GET /api/queue` (worker/flush.js, same sign-in and owner check as `/api/flags`) reads the last 14 days of the private queue files through the GitHub token and returns items newest first with `status` queued / done (`pr` link, or `note` such as "kept") / held (`why`). The queue text is private: it is drawn for the owner and kept nowhere here; local and tests use `e2e/fixtures/queue.json` (made-up).
+- Tests: the Worker test `queue: …` in `worker/test/flush.test.mjs`; two Log tests at the end of `e2e/align.spec.mjs` (they share Align's verdict set, so they run in its worker).

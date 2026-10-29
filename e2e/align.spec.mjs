@@ -279,3 +279,57 @@ test('an Align card swiped on and flicked back keeps every frame on time on a sl
   // the card left behind was saved as seen (after the glide landed)
   await expect.poll(async () => (await db.list('spaces/_/verdicts')).find(d => d.fact === 'drugs/demo-drug#aaa111')?.choice, { timeout: 15_000 }).toBe('seen');
 });
+
+// The Log tab: his answers, newest first, "Changes only" or "All"; for the owner the notes' queue from /api/queue
+// (e2e/fixtures/queue.json: made-up items). Here with Align's tests: the answers are the same shared set.
+const logTab = '.ui-tab[data-tab-page="#log-page"]:visible, .ui-side-link[data-tab-page="#log-page"]:visible';
+/** @param {import('@playwright/test').Page} page */
+const openLog = async page => {
+  await page.evaluate(() => { scrollTo(0, 0); document.querySelector('.ui-tabbar')?.classList.remove('is-minimised'); });
+  await page.locator(logTab).first().click();
+  await expect(page.locator('#log-page')).toBeVisible();
+};
+
+test('the Log tab lists his answers, newest first; Changes only hides the ones that change nothing; a member sees no queue', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await synced(page);
+  await openAlign(page);
+  await (await card(page)).getByRole('button', { name: '1 mg/kg' }).click();
+  await (await card(page)).getByRole('button', { name: 'Agree' }).click();
+  await expect(page.locator('#align-count')).toHaveText('2 of 4');
+  await (await card(page)).getByRole('button', { name: 'Show answer' }).click();
+  await (await card(page)).getByRole('button', { name: 'Bad question' }).click();
+  await verdictOf('drugs/sample-agent#ccc333', 'bad-question');
+  await openLog(page);
+  const rows = page.locator('#log-answers .log-row');
+  await expect(rows).toHaveCount(1);   // Changes only (the default)
+  await expect(rows.first()).toContainText('Bad question');
+  await expect(rows.first()).toContainText('Onset in 60 s');   // the line, from the notes
+  await page.locator('#log-filter [data-filter="all"]').click();
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toHaveAttribute('data-choice', 'bad-question');   // newest first
+  await expect(rows.nth(1)).toHaveAttribute('data-choice', 'agree');
+  await page.locator('#log-filter [data-filter="changes"]').click();
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator('#log-queue-block')).toBeHidden();
+  expect((await page.request.get('/api/queue')).status()).toBe(401);   // (a member's 403 is in the Worker test)
+});
+
+test('the owner sees the queue: newest first, each queued, done (with the pull request link or a note) or held (why)', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
+  await expect(page.locator('#tab-log')).toBeVisible();
+  await openLog(page);
+  const rows = page.locator('#log-queue .log-row');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toHaveAttribute('data-status', 'queued');
+  await expect(rows.nth(0)).toContainText('Made-up queued line');
+  await expect(rows.nth(1)).toHaveAttribute('data-status', 'held');
+  await expect(rows.nth(1)).toContainText('line changed since');
+  await expect(rows.nth(2)).toHaveAttribute('data-status', 'done');
+  await expect(rows.nth(2).getByRole('link', { name: 'Pull request' })).toHaveAttribute('href', 'https://github.com/example/notes/pull/1');
+  await expect(rows.nth(3)).toContainText('flagged F0012');
+  await expect(rows.nth(3).getByRole('link')).toHaveCount(0);
+});

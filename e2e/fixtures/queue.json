@@ -1,0 +1,9 @@
+{
+ "generated": "made-up queue items for the tests (the Log tab)",
+ "items": [
+  { "fact": "drugs/demo-drug#aaaa", "choice": "edit", "text": "Made-up queued line", "at": 4102444800000 },
+  { "fact": "add:drugs/demo-drug#k1", "choice": "add", "text": "Made-up added line", "section": "Dosage", "at": 4102444700000, "held": "line changed since" },
+  { "fact": "drugs/demo-drug#bbbb", "choice": "repo-wrong", "text": "Made-up fixed line", "at": 4102444600000, "done": "https://github.com/example/notes/pull/1" },
+  { "fact": "wrong:drugs/demo-drug#cccc", "choice": "flag", "text": "Made-up flagged line", "at": 4102444500000, "done": "flagged F0012" }
+ ]
+}

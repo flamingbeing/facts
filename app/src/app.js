@@ -12,6 +12,7 @@ import { notSetUpScreen } from './screens/not-set-up.js';
 import { alignScreen } from './screens/align.js';
 import { testScreen } from './screens/test.js';
 import { addScreen } from './screens/add.js';
+import { logScreen } from './screens/log.js';
 import { startShell, settingsPage } from './shell.js';
 
 const typing = () => document.activeElement?.tagName === 'INPUT' && !!(/** @type {HTMLInputElement} */ (document.activeElement).value);
@@ -46,6 +47,7 @@ else {
   const align = alignScreen(app);
   const test = testScreen(/** @type {any} */ (app));   // the quiz tab: shown once signed in with access (onState)
   const add = addScreen(/** @type {any} */ (app));   // the owner's tab: shown once the role says so (onState)
+  const log = logScreen(/** @type {any} */ (app));   // his answers and the queue's history: shown once signed in with access (onState)
   // an answer that met a change from another device waits for a choice; one the server refused is kept: both show on Align
   /** @param {any} v */
   const verdictText = v => String(v?.text || v?.fact || '');
@@ -70,9 +72,10 @@ else {
       if (s.user) $('sign-out-msg').textContent = '';
       add.owner(s.role === 'admin');
       test.state(s);
+      log.state(s);
       show(s);
     },
-    onVerdicts(v) { align.verdicts(v); test.verdicts(v); window.starter.ready = true; },
+    onVerdicts(v) { align.verdicts(v); test.verdicts(v); log.verdicts(v); window.starter.ready = true; },
     onRecall(r) { test.recall(r); },
   });
 }
