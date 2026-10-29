@@ -108,5 +108,5 @@ text changed). Nothing is saved, so there is no format to migrate.
 - A card swiped past with no answer is saved as `seen`, after the glide lands. This is skipped when the line already
   has a real answer, so his fix text is never overwritten.
 - Flags (questions the notes mark as doubtful) need an owner-only route on the Worker: next step.
-- Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. `e2e/jank.spec.mjs` is the card swipe at 4x
+- Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. The jank gate in the same file is the card swipe at 4x
   CPU slowdown, with app-ui's frame budget.
