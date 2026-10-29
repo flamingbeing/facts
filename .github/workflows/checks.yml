@@ -84,7 +84,7 @@ jobs:
     # Chromium phone, split so no shard runs much over a minute (raise `shards` when one does)
     uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
     with:
-      shards: 3
+      shards: 4
       emulators: firestore,auth
 
   vite:
