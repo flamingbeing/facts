@@ -9,7 +9,7 @@
 // An answer that asks for a change is sent to the notes' queue (app.flush) a little after the finger lifts, and when
 // the page is hidden.
 import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/ui';
-import { AREA_NAMES, cardsFrom, queue, flagDeck, questionFor, plain, seenFrom } from '../cards.js';
+import { AREA_NAMES, chipOrder, cardsFrom, queue, flagDeck, questionFor, plain, seenFrom } from '../cards.js';
 import { loadData } from '../data.js';
 import { REFUSED } from '../state.js';
 import { el, ago, askCard } from '../ask.js';
@@ -177,7 +177,7 @@ export function alignScreen(app) {
   // the area chips (all, then each area the data has) and the search box
   const chips = $('align-areas');
   const drawChips = () => {
-    const areas = [...new Set(lines.map(l => l.area))];
+    const areas = chipOrder([...new Set(lines.map(l => l.area))]);
     chips.replaceChildren(...['', ...areas].map(a => {
       const b = /** @type {HTMLButtonElement} */ (el('button', 'chip', a ? AREA_NAMES[a] ?? a : 'All'));
       b.type = 'button'; b.dataset.area = a;

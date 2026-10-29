@@ -6,7 +6,7 @@
 // button) saves a verdict on 'wrong:<line>' with choice 'flag', which the queue (worker/flush.js) takes to the notes'
 // processor, and takes the card out of the deck at once. A wrong answer only reschedules; it never edits the notes.
 import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/ui';
-import { AREA_NAMES, cardsFrom, questionFor, flaggedIds, plain, WRONG } from '../cards.js';
+import { AREA_NAMES, chipOrder, cardsFrom, questionFor, flaggedIds, plain, WRONG } from '../cards.js';
 import { grade, testDeck, topicScores } from '../schedule.js';
 import { loadData } from '../data.js';
 import { REFUSED } from '../state.js';
@@ -145,7 +145,8 @@ export function testScreen(app) {
   // the area chips (all, then each area with a question) and the search box, as Align's
   const chips = $('test-areas');
   const drawChips = () => {
-    const areas = [...new Set(lines.filter(l => l.qs.length).map(l => l.area))];
+    const seen = [...new Set(lines.filter(l => l.qs.length).map(l => l.area))];
+    const areas = chipOrder(seen);
     chips.replaceChildren(...['', ...areas].map(a => {
       const b = /** @type {HTMLButtonElement} */ (el('button', 'chip', a ? AREA_NAMES[a] ?? a : 'All'));
       b.type = 'button'; b.dataset.area = a;
