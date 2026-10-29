@@ -68,7 +68,8 @@ test('asked for more contrast: solid card colour, no blur', async ({ phone }) =>
   await expect(page.locator('html')).toHaveClass(/\bglass\b/);
   await collapsed(page);
   expect(await style(page, '.ui-bar', 'backdrop-filter')).toBe('none');
-  await expect.poll(async () => style(page, '.ui-bar', 'background-color')).toBe(await surface(page));   // (the bar fades to it)
+  // (the bar fades to it; read both together, as the surface itself can still be settling from the look change)
+  await expect.poll(async () => (await style(page, '.ui-bar', 'background-color')) === (await surface(page))).toBe(true);
 });
 
 // (the springs finished, so axe and the screenshots see the parts at rest, not mid fade-in)
