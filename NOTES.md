@@ -160,7 +160,17 @@ as a merge or correction of his lines. Tests: `worker/test/draft.test.mjs`, `e2e
 
 ### Add tab cost
 
-Measured from the route's `usage` on the live app (to be filled in after the first live run).
+Measured 30 Oct 2026 with the real route code against the live notes (590 topics; the cached topic list is ~52k tokens),
+list prices. The first paste in 5 minutes writes the cache (most of a single fact's cost); later pastes read it.
+
+| Paste | Haiku | Sonnet |
+|---|---|---|
+| 1 fact, cache cold | $0.0067 | $0.13 |
+| 1 fact, cache warm | $0.0007 | $0.014 |
+| 20 facts, warm (14 calls, 37k in) | $0.008 ($0.0004/fact) | $0.13 ($0.006/fact) |
+
+The 20-line test (common drug lines) came back as 24 cards on Haiku (14 duplicates, 5 merges, 5 new) and 22 on Sonnet
+(11, 5, 6): Haiku is ~15x cheaper per fact and the default. Each call: ~52k cached + a few k fresh, well under 100k.
 
 ## Test tab
 
