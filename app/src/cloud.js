@@ -4,9 +4,7 @@
 // Firestore layout (rules in firestore.app.rules):
 //   members/{uid}              { role: admin | member | viewer, v }   the role doc (source of truth; admins change it
 //                              through the Worker's /api/members/, which revokes a removed person's access)
-//   spaces/_/items/{id}        { text, updatedAt, serverAt, _edits }  the list (_edits: who changed each field, and when) ('_' is the single group)
 //   spaces/_/verdicts/{id}     { fact, choice, text?, at, by, … }   Align's answers, one per person and line (cards.js docId)
-//   spaces/_/bin/{coll:id}     { id, kind, data, deletedAt, … }       a deleted item's last version (delete to bin)
 //
 // Roles reach the rules as custom claims ({ g: { _: role }, v }), a cache of the role doc: the Worker's /api/claims
 // writes them. The auth module reads the role doc live (claims.watch) and asks for new claims whenever its v is ahead
@@ -19,7 +17,7 @@
 // and "Forget this device" wipes them on purpose.
 import { createApp } from '@core/app';
 import { auth } from '@core/auth';
-import { sync, leaveEntry } from '@core/sync';
+import { sync } from '@core/sync';
 import { update } from '@core/update';
 import { settings } from '@core/settings';
 import * as register from 'app-update/register.js';
@@ -28,19 +26,16 @@ import { emulator, configured, roleOf, needsClaims } from './roles.js';
 import { setHint } from './hint.js';
 import { OPTIONS, SETTINGS_COLL } from './options.js';
 import { dataModules } from './data-modules.js';
-import { COLL } from './items.js';
 import { VERDICTS, docId } from './cards.js';
 
 export { usingEmulator } from './roles.js';
-export { lastSignedIn, keepList, keptList } from './hint.js';
+export { lastSignedIn } from './hint.js';
 const SPACE = '_';
-// (the list's shared bits live in items.js, the same in a static app; named here too for the files recipe)
-export { COLL, itemText, REFUSED } from './items.js';
+export { REFUSED } from './state.js';
 
-/** @typedef {import('./items.js').Item} Item */
-/** @typedef {import('./items.js').User} User */
-/** @typedef {import('./items.js').Phase} Phase */
-/** @typedef {import('./items.js').State} State */
+/** @typedef {import('./state.js').User} User */
+/** @typedef {import('./state.js').Phase} Phase */
+/** @typedef {import('./state.js').State} State */
 
 /** @type {Promise<{ A: typeof import('firebase/auth'), F: typeof import('firebase/firestore'), auth: any, db: any, emulator: boolean }> | null} */
 let fb = null;
@@ -81,13 +76,9 @@ function deviceName() {
   } catch { return ''; }
 }
 
-/** @param {Record<string, unknown>} rec */
-const binCopy = ({ serverAt, ...rest }) => JSON.parse(JSON.stringify(rest));
 /**
  * @typedef {object} Hooks
  * @property {(s: State) => void} onState
- * @property {(items: Item[], changed: Set<string>) => void} onList  the list as this device has it, with its unsent saves
- *   laid over; changed: the ids whose copy changed since the last call (none the first time)
  * @property {(verdicts: import('./cards.js').Verdict[]) => void} [onVerdicts]  Align's answers as this device has them
  * @property {(byItem: Map<string, unknown[]>) => void} [onFiles]  every item's attached files (item id -> them), whenever
  *   one changes (the files recipe)
@@ -115,18 +106,13 @@ export async function start({ canReload = null }) {
       },
     }),
     sync({
-      colls: [COLL, VERDICTS, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
+      colls: [VERDICTS, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
       scope: () => SPACE, device: deviceName(), wake: true,
-      // a delete writes the item's last version to the bin in the same transaction ({ id, kind, data, deletedAt }:
-      // the other devices drop the item from it, and data keeps the deleted version)
       // held: a same-field clash is kept on the phone that made the save until its person chooses (never overwritten);
       // edits: each write records who changed each field and when, for the popup
       // commitRetry: a send refused with permission-denied just after sign-in (the role check still catching up) is tried
       // once more after 500 ms, as app-sync advises for rules that read a document another write is creating
-      backend: { stampMode: 'server', writeId: false, held: true, edits: '_edits', commitRetry: { codes: ['permission-denied'], delay: 500 },
-        onCommit: (/** @type {any} */ { scope, coll, before, after, at, fields }) => coll === COLL && !after && before
-          ? [{ path: ['spaces', scope, 'bin', `${coll}:${before.id}`], data: { ...leaveEntry(coll, before, at), data: binCopy(before), ...fields } }] : [] },
-      hub: { bin: 'bin' }, stores: { metaOnly: ['bin'] },
+      backend: { stampMode: 'server', writeId: false, held: true, edits: '_edits', commitRetry: { codes: ['permission-denied'], delay: 500 } },
       // a save the server refused is set aside (kept, with its code) until the person retries or discards it
       onRefused: () => 'archive',
     }),
@@ -142,8 +128,6 @@ export async function start({ canReload = null }) {
 
   app.status$((/** @type {{ unsent: number }} */ st) => { unsent = st.unsent; });
 
-  /** @type {(() => void) | null} */
-  let offList = null;
   /** @type {(() => void) | null} */
   let offFiles = null;
   /** @type {(() => void) | null} */
@@ -164,11 +148,11 @@ export async function start({ canReload = null }) {
     try { claims = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { /* none */ }
     return { token, claims, stale: true };
   };
-  const stopList = () => { offList?.(); offList = null; offFiles?.(); offFiles = null; offVerdicts?.(); offVerdicts = null; offSettings?.(); offSettings = null; };
+  const stopList = () => { offFiles?.(); offFiles = null; offVerdicts?.(); offVerdicts = null; offSettings?.(); offSettings = null; };
   // the token as it is now decides what the page shows (after sign-in, and after every claims ask); the newest call wins
   show = async () => {
     if (!hooks) return;
-    const { onState, onList, onFiles, onVerdicts } = hooks;
+    const { onState, onFiles, onVerdicts } = hooks;
     const n = ++seq;
     await settled;
     if (n !== seq) return;
@@ -186,11 +170,6 @@ export async function start({ canReload = null }) {
     setHint(true);
     onState({ phase: 'ready', user, role });
     offSettings ??= app.settings.follow();   // the account's options, heard from other devices (listening needs the role)
-    let first = true;
-    offList ??= app.sync.watch(SPACE, COLL, (/** @type {Item[]} */ list, /** @type {{ changed?: string[] }} */ meta) => {
-      onList(list.filter(x => !x._deleted), new Set(first ? [] : meta?.changed || []));
-      first = false;
-    });
     if (onVerdicts) offVerdicts ??= app.sync.watch(SPACE, VERDICTS, (/** @type {any[]} */ list) => onVerdicts(list.filter(x => !x._deleted && x.by === user.uid)));
     if (onFiles && dataModules.files) offFiles ??= dataModules.files.watch(app, SPACE, onFiles);
   };
@@ -208,33 +187,15 @@ export async function start({ canReload = null }) {
   };
   /** @param {Promise<unknown>} saving */
   const refusal = saving => saving.then(() => '', e => (e instanceof Error && e.message) || 'The server refused it');
-  const id = () => (crypto.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2)).replace(/-/g, '');
   return {
     // the modules' apis, for the UI kit's parts (update: with a service worker only, else null)
     auth: app.auth, sync: app.sync, settings: app.settings, update: app.update || null, files: app.files,
     // the whole app's status (sync and the modules): { state, count, unsent }
     /** @param {(st: { state: string, count: number, unsent: number }) => void} fn */
     status$: fn => app.status$(fn),
-    // from now on: onState with what the page shows, onList with the list once it is shown
+    // from now on: onState with what the page shows, onVerdicts with Align's answers once it is shown
     /** @param {Hooks} h */
     follow(h) { hooks = h; void show(); },
-    // add and edit resolve to '' when the save is stored or queued, or to the reason when the server refused it at
-    // once (app-sync rejects then; the copy waits in the refused list, so the page says so rather than fail)
-    /** @param {string} text @returns {Promise<string>} */
-    add: text => refusal(app.sync.save(COLL, SPACE, { id: id(), text, createdAt: Date.now() }, null)),
-    // base: the copy the edit started from
-    /** @param {Item} item @param {string} text @returns {Promise<string>} */
-    edit: (item, text) => refusal(app.sync.save(COLL, SPACE, { ...item, text }, item)),
-    // a delete takes the item's attached files with it (the files recipe)
-    /** @param {Item} item @param {unknown[]} [attached] */
-    remove: async (item, attached = []) => {
-      void app.sync.hub.drop(SPACE, COLL, [item.id]);
-      await app.sync.save(COLL, SPACE, { id: item.id, _deleted: true }, item);
-      await dataModules.files?.removeAll(app, attached);
-    },
-    // one item, live from the server: cb(item) when its copy changes, cb(null) once the server says it is gone -> stop()
-    /** @param {string} itemId @param {(item: Item | null) => void} cb @returns {() => void} */
-    watchItem: (itemId, cb) => app.sync.watchDoc(['spaces', SPACE, COLL, itemId], cb),
     // Align: his answer on a line (one doc per person and line, his latest answer wins); base: the doc as this device had it, if any
     // q: the question he saw ('' for none), so a "bad question" names it
     /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @param {string} [q] @returns {Promise<string>} */

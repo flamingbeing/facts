@@ -59,24 +59,22 @@
       <h2 class="ui-bar-title" aria-hidden="true">Facts</h2>
       <span class="ui-bar-side ui-bar-end"></span>
     </header>
+    <!-- (the kit's shell looks for a .ui-list to watch; this app has no list, so it gets an empty one that never shows) -->
+    <ul class="ui-list" hidden></ul>
 
     <nav class="ui-sidebar" id="side" aria-label="Sections">
       <p class="ui-sidebar-name"><img class="app-mark" src="icons/icon.svg" alt="" width="28" height="28">Facts</p>
-      <a class="ui-side-link" href="./" data-tab-page="#items-page" aria-current="page">Items</a>
-      <a class="ui-side-link" href="./" data-tab-page="#align-page">Align</a>
+      <a class="ui-side-link" href="./" data-tab-page="#align-page" aria-current="page">Align</a>
       <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
     </nav>
 
     <main class="ui-screens">
-      <section class="ui-screen" id="items-page" aria-labelledby="items-title">
-        <h1 class="ui-large-title" id="items-title">Items</h1>
-        <!-- cloud{ the sync chip: a static app's list is never unsent -->
-        <p class="status-line"><span id="sync-chip"></span></p>
-        <!-- }cloud -->
+      <section class="ui-screen ui-tab-page" id="align-page" aria-labelledby="align-title">
+        <h1 class="ui-large-title" id="align-title">Align</h1>
         <!-- cloud{ sign-in, access and set-up: a static app has none (tools/flavour.mjs) -->
         <div id="signed-out" hidden>
           <img class="app-mark app-mark-big" src="icons/icon.svg" alt="" width="72" height="72">
-          <p>Sign in to see the list.</p>
+          <p>Sign in to see the cards.</p>
           <div id="sign-in-sheet" class="sheet"></div>
         </div>
         <div id="no-access" hidden>
@@ -87,32 +85,17 @@
           <p>This app isn't connected to its Firebase project yet (see README, "Fill").</p>
         </div>
         <!-- }cloud -->
-        <div id="list-view" hidden>
+        <div id="align-view" hidden>
           <div id="conflict-sheet"></div>
           <div id="refused-list"></div>
-          <p id="edit-msg" class="small" role="status"></p>
-          <div id="list-tools"></div>
-          <form id="add" autocomplete="off">
-            <label for="new-text">New item</label>
-            <div class="row">
-              <input id="new-text" name="text" maxlength="500" required>
-              <button type="submit">Add</button>
-            </div>
-          </form>
-          <p id="count" class="small" role="status" hidden></p>
-          <div id="items-state"></div>
-          <ul id="items" class="ui-list" aria-label="Items"></ul>
-          <div id="empty"></div>
-        </div>
-      </section>
-
-      <section class="ui-screen ui-tab-page" id="align-page" aria-labelledby="align-title" hidden>
-        <h1 class="ui-large-title" id="align-title">Align</h1>
-        <p id="align-gate">Sign in on the Items tab first.</p>
-        <div id="align-view" hidden>
           <div id="align-areas" class="align-chips" role="group" aria-label="Area"></div>
           <input id="align-find" type="text" enterkeyhint="go" placeholder="Find topics and lines" aria-label="Find cards" autocomplete="off">
-          <p id="align-count" class="small" role="status"></p>
+          <div class="align-countrow">
+            <p id="align-count" class="small" role="status"></p>
+            <!-- cloud{ the sync chip: a static app's answers are never unsent -->
+            <span id="sync-chip"></span>
+            <!-- }cloud -->
+          </div>
           <div id="align-state"></div>
           <div id="align-deck" aria-label="Cards"></div>
           <div id="align-empty"></div>
@@ -132,28 +115,13 @@
     </main>
 
     <nav class="ui-tabbar" data-minimise aria-label="Sections">
-      <button type="button" class="ui-tab" data-tab-page="#items-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">✓</span>Items</button>
-      <button type="button" class="ui-tab" data-tab-page="#align-page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
+      <button type="button" class="ui-tab" data-tab-page="#align-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
       <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
     </nav>
   </div>
 
   <div id="toasts"></div>
 
-  <dialog id="edit" aria-labelledby="edit-title">
-    <form method="dialog" id="edit-form">
-      <h2 id="edit-title">Edit item</h2>
-      <label for="edit-text">Text</label>
-      <input id="edit-text" maxlength="500" required>
-      <p id="edit-live" class="small" role="status"></p>
-      <div id="edit-extras"></div>
-      <div class="row">
-        <button id="edit-save" value="save">Save</button>
-        <button id="edit-delete" value="delete" type="button" class="danger">Delete</button>
-        <button value="cancel" formnovalidate>Cancel</button>
-      </div>
-    </form>
-  </dialog>
   <dialog id="fix" aria-labelledby="fix-title">
     <form method="dialog">
       <h2 id="fix-title">What should it say?</h2>

@@ -19,6 +19,6 @@ test('the test user is signed in on the live site, with no data and no console e
   await page.reload();
   await expect(page.locator('#who')).toHaveText(email);
   await expect(page.locator('#signed-out')).toBeHidden();
-  await expect(page.locator('#list-view')).toBeHidden();   // an account with no role sees no list
+  await expect(page.locator('#align-count')).toBeHidden();   // an account with no role sees no cards
   expect(errors).toEqual([]);
 });

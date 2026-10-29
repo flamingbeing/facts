@@ -1,14 +1,14 @@
 // The page's wiring: the shell and Settings page (shell.js), the kit's sync chip, the account block, and the screen
-// switch. The sample screens (screens/) show a list with add, edit, delete, conflicts and refused saves; a new app
-// replaces them and keeps this wiring, cloud.js and the kit (@core/ui, @core/theme).
-import { syncChip, plural, loadState } from '@core/ui';
-import { start, usingEmulator, emulatorSignIn, lastSignedIn, keepList, keptList } from './cloud.js';
+// switch. Align (screens/align.js) is the first tab and the screen of the "ready" phase; the sign-in, no-access and
+// not-set-up screens show in its place (they sit in its page, index.html).
+import { syncChip, plural, loadState, conflictSheet, refusedList } from '@core/ui';
+import { start, usingEmulator, emulatorSignIn, lastSignedIn } from './cloud.js';
 import { $ } from './dom.js';
+import { VERDICTS } from './cards.js';
 import { screenSwitch } from './screen-switch.js';
 import { signedOutScreen } from './screens/signed-out.js';
 import { noAccessScreen } from './screens/no-access.js';
 import { notSetUpScreen } from './screens/not-set-up.js';
-import { listScreen } from './screens/list.js';
 import { alignScreen } from './screens/align.js';
 import { startShell, settingsPage } from './shell.js';
 
@@ -19,21 +19,13 @@ const sheetOpen = () => !!document.querySelector('dialog[open]');
 // sheet is open or saves are unsent. (Off in the emulator tests unless ?sw is given.)
 const withSW = 'serviceWorker' in navigator && (!usingEmulator || new URLSearchParams(location.search).has('sw'));
 
-window.starter = { ready: false, add: text => app?.add(text), signInAs: emulatorSignIn, files: () => app?.files, members: () => app?.members };   // for the tests
+window.starter = { ready: false, signInAs: emulatorSignIn, files: () => app?.files, members: () => app?.members };   // for the tests
 startShell();   // the tabs and menu work while the app starts
-// this device was signed in last time: show the list's frame (skeleton rows) now, not a blank page or the sign-in screen
+// this device was signed in last time: show Align's frame (skeleton cards) now, not a blank page or the sign-in screen
 // while the sign-in is restored (cloud.js says signed out only once it has settled, and then the sign-in screen replaces it)
 if (lastSignedIn()) {
-  $('list-view').hidden = false; $('add').hidden = true;
-  // the list as it was last drawn, read-only, until the real one arrives (list.js replaces every row)
-  const kept = keptList();
-  if (kept.length) $('items').replaceChildren(...kept.map(r => {
-    const li = document.createElement('li'), b = document.createElement('button');
-    b.type = 'button'; b.textContent = r.text; b.disabled = true;
-    li.append(b);
-    return li;
-  }));
-  else loadState($('items-state')).loading();
+  $('align-view').hidden = false;
+  loadState($('align-state'), { rows: 3 }).loading();
 }
 const app = await start({ canReload: withSW ? () => !typing() && !sheetOpen() : null });
 settingsPage(app);
@@ -49,19 +41,23 @@ else {
   });
   syncChip($('sync-chip'), { sync: /** @type {any} */ ({ status$: chipStatus$ }) });   // (the chip reads only status$)
   chipStatus$(st => { window.starter.status = st.state; });
-  const list = listScreen(app);
   const align = alignScreen(app);
+  // an answer that met a change from another device waits for a choice; one the server refused is kept: both show on Align
+  /** @param {any} v */
+  const verdictText = v => String(v?.text || v?.fact || '');
+  conflictSheet($('conflict-sheet'), { sync: app.sync, text: verdictText });
+  refusedList($('refused-list'), { sync: app.sync, kind: VERDICTS, text: verdictText });
   const show = screenSwitch({
     'signed-out': signedOutScreen(app, { onForget: ok => { if (ok) $('sign-out-msg').textContent = ''; } }),
     'no-access': noAccessScreen(),
     'not-set-up': notSetUpScreen(),
-    ready: list,
+    ready: align,
   });
   $('sign-out').addEventListener('click', async () => {
     const unsent = await app.signOut();
     $('sign-out-msg').textContent = unsent
       ? `Signed out. ${plural(unsent, 'unsent change')} kept on this device; they send when you sign in again.`
-      : 'Signed out. The list is kept on this device for your next sign-in.';
+      : 'Signed out. Your answers are kept on this device for your next sign-in.';
   });
   app.follow({
     onState(s) {
@@ -69,14 +65,7 @@ else {
       $('sign-out').hidden = !s.user;
       if (s.user) $('sign-out-msg').textContent = '';
       show(s);
-      if (s.phase === 'ready') align.show(s); else align.hide();
     },
-    onList(items, changed) {
-      list.draw(items, changed);
-      keepList(list.shown());
-      window.starter.ready = true;
-    },
-    onVerdicts(v) { align.verdicts(v); },
-    onFiles(by) { list.drawFiles(by); },
+    onVerdicts(v) { align.verdicts(v); window.starter.ready = true; },
   });
 }

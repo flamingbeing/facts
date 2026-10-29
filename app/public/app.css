@@ -1,20 +1,9 @@
-/* The sample screens' layout; colours, type and the kit parts' look come from theme/theme.css, ui/ui.css and, for the
+/* The screens' layout; colours, type and the kit parts' look come from theme/theme.css, ui/ui.css and, for the
    shell, ui/gestures.css and ui/shell/shell.css. */
 .status-line { margin: 0 var(--pad) var(--gap); }
-#items-page > :not(.ui-large-title) { max-width: 40rem; margin-inline: auto; padding-inline: var(--pad); }
+/* the sync chip shares the count line, so Align's deck keeps its height */
+.align-countrow { display: flex; justify-content: space-between; align-items: baseline; gap: var(--gap); }
 input { padding: .5rem; flex: 1; min-width: 10rem; }
-#items { padding: 0; }
-#items li { list-style: none; }
-#items li button { width: 100%; text-align: left; margin: .25rem 0; }
-
-/* an item changed (here or on another device) since the list last showed */
-#items li.changed button { border-inline-start: 3px solid var(--accent); }
-
-/* when an item was added and last changed (list.js) */
-#items li .item-when { display: block; padding: 0 .75rem .5rem; font-size: .75rem; opacity: .7; }
-
-/* the sample options (src/options.js) */
-#items.big li button { padding: 1rem .75rem; font-size: 1.15rem; }
 
 /* toasts sit above the tab bar on a phone; the room under each screen for the tab bar is the kit's (tabBarRoom), so
    the body adds none (a second room would make a screen that fits, as Align's filled card deck, scroll) */
