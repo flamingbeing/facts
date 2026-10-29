@@ -38,11 +38,10 @@ export function cardsFrom(files) {
   return out;
 }
 
-// The Firestore doc id of a fact's verdict ('/' and '#' are not allowed there, '~' is) and back.
-/** @param {string} factId */
-export const docId = factId => factId.replace('/', '~').replace('#', '~');
-/** @param {string} id */
-export const factIdOf = id => { const [a, t, h] = id.split('~'); return `${a}/${t}#${h}`; };
+// The Firestore doc id of one person's verdict on a line: their uid, then the line id with every '/' and '#' as '~'
+// ('/' is not allowed there; the doc keeps the line id itself in fact, so the id need not turn back). The rules check it.
+/** @param {string} uid @param {string} factId */
+export const docId = (uid, factId) => `${uid}~${factId.replaceAll(/[/#]/g, '~')}`;
 
 /** the app-sync collection of his answers (cloud.js; rules in firestore.app.rules) */
 export const VERDICTS = 'verdicts';

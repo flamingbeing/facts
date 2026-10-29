@@ -58,11 +58,12 @@ export function alignScreen(app) {
   let last = -1;
   const answered = new Set();
   let canWrite = false, started = false;
+  let touched = false;   // he has tapped something on this deck (a fresher deck then waits for the next visit)
 
   // one verdict, now or after the glide; the card moves on by itself after an answer
   /** @param {Line} line @param {string} choice @param {string} [text] */
   const save = async (line, choice, text = '') => {
-    answered.add(line.id);
+    answered.add(line.id); touched = true;
     const why = await app.verdict(line.id, choice, text, mine.get(line.id) ?? null);
     if (why) toast(REFUSED);
   };
@@ -85,6 +86,7 @@ export function alignScreen(app) {
     $('fix-title').textContent = choice === 'edit' ? 'Edit the line' : 'What should it say?';
     $('fix-where').textContent = `${line.title} · ${line.section}`;
     input('fix-text').value = plain(line.text);
+    sheet.returnValue = '';   // Escape or the back gesture closes it with the last value, so a cancel would save
     sheet.showModal();
   };
 
@@ -117,7 +119,7 @@ export function alignScreen(app) {
     const back = el('div', 'align-back');
     const lineP = el('p', 'align-line', plain(line.text));
     back.append(lineP);
-    const flip = () => { c.classList.add('answered'); };
+    const flip = () => { c.classList.add('answered'); touched = true; };
     if (!q) {
       c.classList.add('bare', 'answered');
     } else if (q.kind === 'mcq') {
@@ -150,11 +152,12 @@ export function alignScreen(app) {
     return c;
   };
 
-  // a card left behind with no answer is 'seen' (so it goes to the back of the queue next time)
+  // a card left behind with no answer is 'seen' (so it goes to the back of the queue next time), unless he has answered
+  // that line before: 'seen' would write over that answer and its text
   /** @param {number} i */
   const shown = i => {
-    const prev = deck[last];
-    if (prev && i > last && !answered.has(prev.id) && canWrite) void save(prev, 'seen');
+    const prev = deck[last], before = prev && mine.get(prev.id);
+    if (prev && i > last && !answered.has(prev.id) && canWrite && (!before || before.choice === 'seen')) void save(prev, 'seen');
     last = i;
     $('align-count').textContent = `${i + 1} of ${deck.length}`;
   };
@@ -163,7 +166,7 @@ export function alignScreen(app) {
     pager?.stop(); pager = null;
     stage.replaceChildren();
     stage.className = '';
-    last = -1; answered.clear();
+    last = -1; answered.clear(); touched = false;
     deck = queue(lines, seenFrom([...mine.values()]), filter);
     empty.show(!!lines.length && !deck.length);
     stage.hidden = !deck.length;
@@ -199,25 +202,29 @@ export function alignScreen(app) {
     state.loading();
     loadData((files, { from }) => {
       // a fresher copy from the network while he is part-way through the deck waits for the next visit
-      if (from === 'network' && lines.length && last > 0) return;
+      if (from === 'network' && lines.length && (last > 0 || touched)) return;
       lines = cardsFrom(files);
       state.done();
       drawChips();
       build();
-    }).catch(() => { if (!lines.length) state.failed('The cards could not load. Check the connection.', load); });
+    }).then(() => { if (!lines.length) throw new Error('no cards'); })
+      .catch(() => { if (!lines.length) state.failed('The cards could not load. Check the connection.', load); });
   };
 
   return {
     show(s) {
+      const could = canWrite;
       canWrite = s.role === 'admin' || s.role === 'member';
+      if (started && could !== canWrite && lines.length) build();   // the answer buttons are made with the card
       $('align-view').hidden = false; $('align-gate').hidden = true;
       if (!started) { started = true; load(); }
     },
-    hide() { $('align-view').hidden = true; $('align-gate').hidden = false; },
+    // signed out: his answers go (the next person's come with their watch)
+    hide() { $('align-view').hidden = true; $('align-gate').hidden = false; mine = new Map(); heard = false; },
     verdicts(list) {
       mine = new Map(list.map(v => [v.fact, v]));
       // the first time they come in, the deck is made again (seen lines to the back), if he hasn't started on it
-      if (!heard && lines.length && last <= 0 && !answered.size) afterGesture(build);
+      if (!heard && lines.length && last <= 0 && !touched) afterGesture(build);
       heard = true;
     },
   };

@@ -5,8 +5,8 @@
 import { test, expect, signIn, db } from './fixtures.mjs';
 
 test.describe.configure({ mode: 'serial' });   // a test beside it would steal its frames; and align.spec's verdicts
-const LINES = ['drugs~demo-drug~aaa111', 'drugs~demo-drug~bbb222', 'drugs~sample-agent~ccc333', 'airway~tubes~ddd444'];
-test.beforeEach(async () => { for (const id of LINES) await db.del(`spaces/_/verdicts/${id}`); });
+// every verdict there (ids are the person's uid and the line), each test from none
+test.beforeEach(async () => { for (const d of await db.list('spaces/_/verdicts')) await db.del(`spaces/_/verdicts/${d.by}~${d.fact.replaceAll(/[/#]/g, '~')}`); });
 
 // app-ui's budget (ms): every drag frame within frame but one, none over worst, no task over task
 const BUDGET = { frame: 20, late: 1, worst: 50, task: 50 };

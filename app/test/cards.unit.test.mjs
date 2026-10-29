@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardsFrom, queue, questionFor, docId, factIdOf, plain, topicsOf } from '../src/cards.js';
+import { cardsFrom, queue, questionFor, docId, plain, topicsOf } from '../src/cards.js';
 
 const FILES = [
   { area: 'drugs', topics: [
@@ -37,9 +37,9 @@ test('questionFor: MCQ first, then the others in turn; none for a bare fact', ()
   assert.equal(questionFor(b), null);
 });
 
-test('docId round trip; plain text; topics', () => {
-  assert.equal(docId('drugs/demo-drug#aaa111'), 'drugs~demo-drug~aaa111');
-  assert.equal(factIdOf('drugs~demo-drug~aaa111'), 'drugs/demo-drug#aaa111');
+test('docId; plain text; topics', () => {
+  assert.equal(docId('u1', 'drugs/demo-drug#aaa111'), 'u1~drugs~demo-drug~aaa111');
+  assert.equal(docId('u1', 'airway/ett/lma#a#b'), 'u1~airway~ett~lma~a~b');
   assert.equal(plain('Dose **2 mg/kg** in `adults`'), 'Dose 2 mg/kg in adults');
   assert.equal(plain('Onset in ____ (_fast_)'), 'Onset in ____ (fast)');
   assert.equal(plain('snake_case_name and *one*'), 'snake_case_name and one');

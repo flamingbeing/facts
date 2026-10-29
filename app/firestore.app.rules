@@ -26,8 +26,8 @@ service cloud.firestore {
       allow delete: if can(g, ['admin', 'member']);
     }
 
-    // Align's verdicts: one doc per line of the shared notes he has answered (id: its line id with '/' and '#' as '~',
-    // cards.js docId). choice: what he said (cards.js CHOICES); text: his fix or edit; at: when (the queue's seen-at).
+    // Align's verdicts: one doc per person and line of the shared notes (id: their uid, '~', the line id with '/' and '#'
+    // as '~'; cards.js docId), so one member's answer never overwrites another's. choice: what he said (cards.js CHOICES); text: his fix or edit; at: when (the queue's seen-at).
     // Only members write them, and each says who; the Worker's flush (step 4) takes the owner's alone.
     match /spaces/{g}/verdicts/{id} {
       allow read: if can(g, ['admin', 'member', 'viewer']);
@@ -39,6 +39,7 @@ service cloud.firestore {
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 2000))
         && request.resource.data.at is number
         && request.resource.data.by == request.auth.uid
+        && id == request.auth.uid + '~' + request.resource.data.fact.replace('[/#]', '~')
         && request.resource.data.updatedAt is number;
       allow delete: if false;
     }

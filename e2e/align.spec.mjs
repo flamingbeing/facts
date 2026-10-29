@@ -4,8 +4,8 @@ import { test, expect, signIn, synced, db } from './fixtures.mjs';
 
 // the verdicts are one shared set ('_'), so this file's tests run one at a time, each from none
 test.describe.configure({ mode: 'serial' });
-const LINES = ['drugs~demo-drug~aaa111', 'drugs~demo-drug~bbb222', 'drugs~sample-agent~ccc333', 'airway~tubes~ddd444'];
-test.beforeEach(async () => { for (const id of LINES) await db.del(`spaces/_/verdicts/${id}`); });
+// every verdict there (ids are the person's uid and the line), each test from none
+test.beforeEach(async () => { for (const d of await db.list('spaces/_/verdicts')) await db.del(`spaces/_/verdicts/${d.by}~${d.fact.replaceAll(/[/#]/g, '~')}`); });
 
 const tabLink = '.ui-tab[data-tab-page="#align-page"]:visible, .ui-side-link[data-tab-page="#align-page"]:visible';
 /** @param {import('@playwright/test').Page} page */
@@ -110,4 +110,37 @@ test('a viewer sees the cards but cannot answer', async ({ phone }) => {
   const c = await card(page);
   await c.getByRole('button', { name: '2 mg/kg' }).click();
   await expect(c.getByRole('button', { name: 'Agree' })).toBeDisabled();
+});
+
+test('the fix sheet closed with Escape saves nothing; a swipe past a line he fixed before keeps his fix', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await openAlign(page);
+  await (await card(page)).getByRole('button', { name: '2 mg/kg' }).click();
+  await (await card(page)).getByRole('button', { name: 'Notes wrong' }).click();
+  await page.locator('#fix-text').fill('Dose 3 mg/kg IV');
+  await page.locator('#fix').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('#align-count')).toHaveText('2 of 4');
+  // the next card: Edit, then Escape (the sheet's last close was a Save)
+  const c = await card(page);
+  await c.getByRole('button', { name: 'Show answer' }).click();
+  await c.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('#fix')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#fix')).toBeHidden();
+  await expect(page.locator('#align-count')).toHaveText('2 of 4');
+  // on past the rest (saved as seen), so next time the fixed line is the oldest, second after the one never seen
+  const next = async n => { await page.evaluate(() => window.align.go(1)); await expect(page.locator('#align-count')).toHaveText(`${n} of 4`); };
+  await next(3); await next(4);
+  await verdictOf('airway/tubes#ddd444', 'seen');
+  expect((await verdictOf('drugs/sample-agent#ccc333')).choice).toBe('seen');
+  await synced(page);
+  await page.reload();
+  await openAlign(page);
+  await expect.poll(() => page.evaluate(() => window.align.deck())).toEqual(['drugs/demo-drug#bbb222', 'drugs/demo-drug#aaa111', 'drugs/sample-agent#ccc333', 'airway/tubes#ddd444']);
+  await next(2); await next(3);
+  await verdictOf('drugs/demo-drug#bbb222', 'seen');
+  await synced(page);
+  const v = await verdictOf('drugs/demo-drug#aaa111');
+  expect([v.choice, v.text]).toEqual(['repo-wrong', 'Dose 3 mg/kg IV']);
 });

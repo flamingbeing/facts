@@ -23,8 +23,9 @@ export async function loadData(onData) {
   const oldIndex = await kept('index');
   /** @type {Map<string, AreaFile>} */
   const have = new Map();
-  for (const area of Object.keys(oldIndex?.areas || {})) { const f = await kept(area); if (f) have.set(area, f); }
-  if (have.size) onData([...have.values()], { from: 'cache' });
+  await Promise.all(Object.keys(oldIndex?.areas || {}).map(async area => { const f = await kept(area); if (f) have.set(area, f); }));
+  const order = (/** @type {string[]} */ areas) => areas.filter(a => have.has(a)).map(a => /** @type {AreaFile} */ (have.get(a)));
+  if (have.size) onData(order(Object.keys(oldIndex?.areas || {})), { from: 'cache' });
 
   /** @type {DataIndex} */
   let index;
@@ -34,29 +35,31 @@ export async function loadData(onData) {
     index = await r.json();
   } catch (e) { if (have.size) return; throw e; }
 
+  // each area: the copy here when its version is the same, else fetched again (the copy here if that fails). The index
+  // kept is what is kept, area by area: an area that failed keeps its old version, so it is asked for again next time
+  /** @type {DataIndex} */
+  const keep = { areas: {} };
+  /** @type {Map<string, AreaFile>} */
+  const now = new Map();
   let changed = false;
-  /** @type {AreaFile[]} */
-  const files = [];
-  for (const [area, meta] of Object.entries(index.areas || {})) {
-    let file = oldIndex?.areas?.[area]?.v === meta.v ? have.get(area) : undefined;
-    if (!file) {
-      try {
-        const r = await fetch(`${BASE}${area}.json?v=${encodeURIComponent(meta.v)}`);
-        if (!r.ok) throw new Error(`${area} ${r.status}`);
-        file = /** @type {AreaFile} */ (await r.clone().json());
-        await cache?.put(BASE + area + '.json', r).catch(() => {});
-        changed = true;
-      } catch {
-        file = have.get(area);   // offline part-way: the old copy of this area, and the index stays the old one
-        if (!file) continue;
-        index = /** @type {DataIndex} */ (oldIndex ?? index);
-      }
+  await Promise.all(Object.entries(index.areas || {}).map(async ([area, meta]) => {
+    const old = oldIndex?.areas?.[area];
+    if (old?.v === meta.v && have.has(area)) { now.set(area, /** @type {AreaFile} */ (have.get(area))); keep.areas[area] = old; return; }
+    try {
+      const r = await fetch(`${BASE}${area}.json?v=${encodeURIComponent(meta.v)}`);
+      if (!r.ok) throw new Error(`${area} ${r.status}`);
+      now.set(area, /** @type {AreaFile} */ (await r.clone().json()));
+      await cache?.put(BASE + area + '.json', r).catch(() => {});
+      keep.areas[area] = meta;
+      changed = true;
+    } catch {
+      const f = have.get(area);   // offline part-way: the old copy of this area
+      if (f && old) { now.set(area, f); keep.areas[area] = old; }
     }
-    files.push(file);
-  }
-  if (have.size !== files.length) changed = true;
+  }));
+  for (const area of have.keys()) if (!index.areas?.[area]) { changed = true; await cache?.delete(BASE + area + '.json').catch(() => {}); }
+  if (!now.size && !have.size) throw new Error('no areas');
   if (!changed) return;
-  if (index !== oldIndex) await cache?.put(BASE + 'index.json', new Response(JSON.stringify(index), { headers: { 'content-type': 'application/json' } })).catch(() => {});
-  for (const area of have.keys()) if (!index.areas?.[area]) await cache?.delete(BASE + area + '.json').catch(() => {});
-  onData(files, { from: 'network' });
+  await cache?.put(BASE + 'index.json', new Response(JSON.stringify(keep), { headers: { 'content-type': 'application/json' } })).catch(() => {});
+  onData(Object.keys(index.areas || {}).filter(a => now.has(a)).map(a => /** @type {AreaFile} */ (now.get(a))), { from: 'network' });
 }

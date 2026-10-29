@@ -5,7 +5,7 @@
 //   members/{uid}              { role: admin | member | viewer, v }   the role doc (source of truth; admins change it
 //                              through the Worker's /api/members/, which revokes a removed person's access)
 //   spaces/_/items/{id}        { text, updatedAt, serverAt, _edits }  the list (_edits: who changed each field, and when) ('_' is the single group)
-//   spaces/_/verdicts/{id}     { fact, choice, text?, at, by, … }   Align's answers, one per line (cards.js docId)
+//   spaces/_/verdicts/{id}     { fact, choice, text?, at, by, … }   Align's answers, one per person and line (cards.js docId)
 //   spaces/_/bin/{coll:id}     { id, kind, data, deletedAt, … }       a deleted item's last version (delete to bin)
 //
 // Roles reach the rules as custom claims ({ g: { _: role }, v }), a cache of the role doc: the Worker's /api/claims
@@ -191,7 +191,7 @@ export async function start({ canReload = null }) {
       onList(list.filter(x => !x._deleted), new Set(first ? [] : meta?.changed || []));
       first = false;
     });
-    if (onVerdicts) offVerdicts ??= app.sync.watch(SPACE, VERDICTS, (/** @type {any[]} */ list) => onVerdicts(list.filter(x => !x._deleted)));
+    if (onVerdicts) offVerdicts ??= app.sync.watch(SPACE, VERDICTS, (/** @type {any[]} */ list) => onVerdicts(list.filter(x => !x._deleted && x.by === user.uid)));
     if (onFiles && dataModules.files) offFiles ??= dataModules.files.watch(app, SPACE, onFiles);
   };
   app.auth.onUser(() => { claimsStatus = 0; void show(); });
@@ -235,12 +235,12 @@ export async function start({ canReload = null }) {
     // one item, live from the server: cb(item) when its copy changes, cb(null) once the server says it is gone -> stop()
     /** @param {string} itemId @param {(item: Item | null) => void} cb @returns {() => void} */
     watchItem: (itemId, cb) => app.sync.watchDoc(['spaces', SPACE, COLL, itemId], cb),
-    // Align: his answer on a line (one doc per line, the latest answer wins); base: the doc as this device had it, if any
+    // Align: his answer on a line (one doc per person and line, his latest answer wins); base: the doc as this device had it, if any
     /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @returns {Promise<string>} */
     verdict: (fact, choice, text, base) => {
       const by = fa.currentUser?.uid || '';
       // text is always written ('' for none), so a later "agree" clears an earlier edit's text
-      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(fact), fact, choice, text: text.slice(0, 2000), at: Date.now(), by }, base));
+      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), at: Date.now(), by }, base));
     },
     // admins: set someone's role, or remove them (they lose access at once; their sessions end). -> '' or the reason
     members: {
