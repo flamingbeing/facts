@@ -80,9 +80,12 @@ export const logItem = i => {
 export const queueLog = (files, nowMs) => files.flatMap(f => f?.items || []).filter(i => Number(i.at) >= nowMs - LOG_DAYS * 864e5)
   .sort((a, b) => b.at - a.at).map(logItem);
 
+// the token's headers for GitHub's API (process.js uses them too)
+export const ghHeaders = (/** @type {any} */ env) => ({ Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'facts-worker', 'X-GitHub-Api-Version': '2022-11-28' });
+
 /** @param {any} env */
 const gh = env => {
-  const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'facts-worker', 'X-GitHub-Api-Version': '2022-11-28' };
+  const headers = ghHeaders(env);
   return {
     /** @param {string} path -> { sha, json } or null */
     async read(path) {
@@ -113,6 +116,22 @@ const gh = env => {
     },
   };
 };
+
+/**
+ * The owner's door, for these routes and worker/process.js: the method, the page's own origin, a verified sign-in, his email.
+ * @param {Request} request @param {(t: string) => Promise<any>} verify @param {string[]} methods -> { token } or { fail: Response }
+ */
+export async function ownerGate(request, verify, methods) {
+  if (!methods.includes(request.method)) return { fail: json({ error: `${methods.join(' or ')}.` }, 405) };
+  const from = request.headers.get('Origin');
+  if (from && from !== new URL(request.url).origin) return { fail: json({ error: 'Wrong origin.' }, 403) };
+  const idToken = (request.headers.get('Authorization') || '').match(/^Bearer\s+(\S+)$/)?.[1];
+  if (!idToken) return { fail: json({ error: 'Sign in first.' }, 401) };
+  let token;
+  try { token = await verify(idToken); } catch { return { fail: json({ error: 'Sign in again.' }, 401) }; }
+  if (!isOwner(token)) return { fail: json({ error: 'Owner only.' }, 403) };
+  return { token };
+}
 
 /** the verdicts saved after `after` (serverAt, ms), oldest first, at most PAGE * PAGES */
 /** @param {any} adm @param {string} base @param {number} after */
@@ -151,14 +170,9 @@ export async function handleFlush(request, { verify, admin: adm, firestore, gith
   const url = new URL(request.url);
   const queue = url.pathname === '/api/queue';
   const flags = url.pathname === '/api/flags' || queue;
-  if (request.method !== (flags ? 'GET' : 'POST')) return json({ error: flags ? 'GET.' : 'POST.' }, 405);
-  const from = request.headers.get('Origin');
-  if (from && from !== url.origin) return json({ error: 'Wrong origin.' }, 403);
-  const idToken = (request.headers.get('Authorization') || '').match(/^Bearer\s+(\S+)$/)?.[1];
-  if (!idToken) return json({ error: 'Sign in first.' }, 401);
-  let token;
-  try { token = await verify(idToken); } catch { return json({ error: 'Sign in again.' }, 401); }
-  if (!isOwner(token)) return json({ error: 'Owner only.' }, 403);
+  const g = await ownerGate(request, verify, [flags ? 'GET' : 'POST']);
+  if (g.fail) return g.fail;
+  const token = g.token;
   try {
     if (queue) {
       if (!github) return json({ items: queueLog([{ items: await queueLocal() }], now()) });

@@ -7,6 +7,7 @@ import { dataRoute } from './data.js';
 import { flushRoute } from './flush.js';
 import { fileRoute } from './file.js';
 import { draftRoute } from './draft.js';
+import { processRoute } from './process.js';
 
 /** @type {{ match(url: URL): boolean, handle(request: Request, env: any, ctx: { url: URL, local: boolean, project: string }): Promise<Response> }[]} */
 export const ROUTES = [
@@ -14,5 +15,6 @@ export const ROUTES = [
   flushRoute,  // the app's own: the owner's queue and flags (flush.js)
   fileRoute,   // the app's own: the Add tab, files and dedupes typed or pasted facts, owner only (file.js)
   draftRoute,  // the app's own: drafts lines on a topic he names, marked model-drafted, owner only (draft.js)
+  processRoute, // the app's own: the Log tab's Merge now, runs the notes' queue processor, owner only (process.js)
   // add: worker routes
 ];

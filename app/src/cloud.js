@@ -270,6 +270,20 @@ export async function start({ canReload = null }) {
         return r?.ok ? (await r.json()).items || [] : null;
       } catch { return null; }
     },
+    // the Log tab's "Merge now" (worker/process.js; owner only): with a model it starts the notes' queue processor, without
+    // one it reads the latest run and its result. -> the Worker's answer, or { error }
+    /** @param {'sonnet' | 'opus'} [model] @returns {Promise<any>} */
+    process: async model => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        if (!token) return { error: 'Sign in first.' };
+        const r = await fetch('/api/process', model
+          ? { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) }
+          : { headers: { Authorization: `Bearer ${token}` } });
+        const body = await r.json().catch(() => ({}));
+        return r.ok ? body : { error: body.error || `Refused (${r.status})` };
+      } catch { return { error: 'Offline: try again.' }; }
+    },
     // admins: set someone's role, or remove them (they lose access at once; their sessions end). -> '' or the reason
     members: {
       /** @param {string} uid @param {'admin' | 'member' | 'viewer'} role */
