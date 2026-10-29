@@ -60,13 +60,15 @@ export function filing(reply, text, known) {
 }
 
 /** @param {any} env  -> (prompt) => the model's text */
-const anthropic = env => async (/** @type {string} */ p) => {
+export const anthropic = env => async (/** @type {string} */ p) => {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 500, messages: [{ role: 'user', content: p }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 1500, messages: [{ role: 'user', content: p }] }),
   });
   if (!r.ok) throw new Error(`anthropic ${r.status}`);
-  return String((await r.json())?.content?.[0]?.text || '');
+  // the reply can start with a non-text block (thinking); join every text block
+  const blocks = (await r.json())?.content;
+  return (Array.isArray(blocks) ? blocks : []).filter((/** @type {any} */ b) => b?.type === 'text').map((/** @type {any} */ b) => String(b.text || '')).join('\n');
 };
 
 /**

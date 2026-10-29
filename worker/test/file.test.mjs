@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleFile, filing, numbers, prompt, MODEL } from '../file.js';
+import { handleFile, filing, numbers, prompt, anthropic, MODEL } from '../file.js';
 import { DEFAULT_ADMINS } from '../members.js';
 
 const ORIGIN = 'https://facts.anawj.com';
@@ -56,4 +56,15 @@ test('file: helpers', () => {
   assert.equal(filing('{"topic":"a/b","section":"s","line":"l"}', 'l', new Set()).topic, 'other/b');
   const t = filing('Here: {"topic":"Drugs/Propofol Dose","line":""}', 'Dose 5 mg', new Set());
   assert.deepEqual([t.topic, t.section, t.line], ['drugs/propofol-dose', 'Notes', 'Dose 5 mg']);
+});
+
+test('file: the model reply is read from its text blocks, thinking blocks first or not', async () => {
+  const real = globalThis.fetch;
+  try {
+    for (const content of [[{ type: 'text', text: '{"topic":"a"}' }], [{ type: 'thinking', thinking: 'hm' }, { type: 'text', text: '{"topic":"b"}' }]]) {
+      globalThis.fetch = async () => new Response(JSON.stringify({ content }), { status: 200 });
+      const got = await anthropic({ ANTHROPIC_API_KEY: 'x' })('p');
+      assert.match(got, /\{"topic":"[ab]"\}/);
+    }
+  } finally { globalThis.fetch = real; }
 });
