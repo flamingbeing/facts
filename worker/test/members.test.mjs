@@ -26,7 +26,7 @@ test('the owner is admin by default, only with a verified email and no role doc'
 });
 
 // /api/members/<uid>: admins change roles and remove people through the Worker (the rules keep members/ closed to pages)
-const ORIGIN = 'https://app.example.com';
+const ORIGIN = 'https://facts.anawj.com';
 const TOKENS = {
   bob: { sub: 'bob' }, ann: { sub: 'ann' }, nob: { sub: 'nob' },
   own: { sub: 'own', email: DEFAULT_ADMINS[0], email_verified: true },

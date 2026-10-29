@@ -26,10 +26,10 @@ const openItem = (page, text) => clickOpens(page.getByRole('button', { name: tex
 const attach = (page, name, buffer, mimeType = 'image/png') => page.setInputFiles('#edit-file', { name, mimeType, buffer });
 // the shared space's file records on the server (db.list leaves document ids out)
 const records = async name => (await db.list('spaces/_/files')).filter(d => d.name === name);
-// the keys of the blobs this phone keeps (IndexedDB starter-app-files / blobs). Other tests' photos on the shared list
+// the keys of the blobs this phone keeps (IndexedDB facts-files / blobs). Other tests' photos on the shared list
 // are cached here too (their thumbnails), so a test checks its own keys, not a count, until a wipe empties it.
 const cached = page => page.evaluate(() => new Promise((ok, no) => {
-  const r = indexedDB.open('starter-app-files');
+  const r = indexedDB.open('facts-files');
   r.onerror = () => no(r.error);
   r.onsuccess = () => {
     const d = r.result;

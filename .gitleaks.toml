@@ -5,4 +5,4 @@ useDefault = true
 
 [allowlist]
 description = "Firebase web config, vendored Firebase hashes"
-paths = ['''app/config\.js''', '''tools/firebase\.lock\.json''']
+paths = ['''app/(src/)?config\.js''', '''tools/firebase\.lock\.json''']

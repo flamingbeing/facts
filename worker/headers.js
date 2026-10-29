@@ -6,7 +6,7 @@
 // report already).
 
 // The design kit's origin. tools/fill.mjs sets it from --kit (homedesign or nuhs).
-export const KIT = 'https://design.flamingbeing.com';
+export const KIT = 'https://design.anawj.com';
 export const CSP_ENFORCE = false;
 
 // The page's import map (app/index.html), the one inline script, allowed by its hash (worker/test/headers.test.mjs

@@ -11,7 +11,7 @@
 export const SITES = {
   // The app at the root. Firebase's sign-in helper pages (/__/auth/, /__/firebase/) are passed on to the project's
   // firebaseapp.com by sites.js, so sign-in stays on this address (authDomain is this host). tools/fill.mjs sets it.
-  'app.example.com': { root: 'app/' },
+  'facts.anawj.com': { root: 'app/' },
 };
 
 // Folders every host serves as they are (shared files, no data), e.g. ['/shared/']

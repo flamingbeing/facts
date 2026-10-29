@@ -1,4 +1,4 @@
-# Starter app
+# Facts
 
 Made from [app-starter](https://github.com/flamingbeing/app-starter), a template for small offline-first web apps that
 are safe from day one. Replace this first paragraph with what the app is once it is filled.

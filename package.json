@@ -1,10 +1,10 @@
 {
-  "name": "starter-app",
+  "name": "facts",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs' 'tools/test/*.test.mjs'",
-    "rules": "cd app && npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-starter-app \"node --test test/rules.test.mjs\"",
+    "rules": "cd app && npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-facts \"node --test test/rules.test.mjs\"",
     "e2e": "playwright test",
     "typecheck": "tsc -p .",
     "vite": "node tools/vite-check.mjs && node tools/vite-outside-package.mjs && node tools/vite-pieces.mjs"
