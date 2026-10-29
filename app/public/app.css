@@ -51,3 +51,12 @@ body { margin: 0; }
 #add-page textarea, #add-page input { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; margin-bottom: .6rem; }
 #add-page .row { display: flex; gap: .6rem; margin: .4rem 0 .8rem; }
 .add-card { margin-top: .8rem; }
+
+/* Test (screens/test.js): the cards are Align's (.align-*); only the page frame, search, score and flag button are its own. */
+#test-page > :not(.ui-large-title) { max-width: 40rem; margin-inline: auto; padding-inline: var(--pad); }
+#test-find { display: block; width: 100%; box-sizing: border-box; margin: var(--gap) 0 .25rem; }
+.test-scores { margin: 0 0 .5rem; }
+.test-scores summary { cursor: pointer; min-height: var(--tap, 44px); display: flex; align-items: center; }
+.test-scores ul { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow-y: auto; }
+.test-scores li { display: flex; justify-content: space-between; gap: 1rem; padding: .25rem 0; }
+.test-flag { grid-column: 1 / -1; }

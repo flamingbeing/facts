@@ -120,3 +120,26 @@ rewords to the notes' house style; if it changes or drops a number the line fall
 verdict with choice `add`, fact `add:<area>/<slug>#<time base36>` (the suffix keeps two adds to one topic from sharing a
 doc; the processor ignores it), `text`, `section` (rules allow `section`, at most 100), then `app.flush()`. Local/test mode:
 a canned filing, no network. Tests: `worker/test/file.test.mjs` (model mocked), `e2e/add.spec.mjs`.
+
+## Test tab
+
+After Align, for anyone signed in with access (`screens/test.js`). It quizzes every line that has a question, using Align's
+card (`ask.js` `askCard`, shared; Align's layout is unchanged), with the same area chips and find box.
+- Scheduler (`schedule.js`, pure, `app/test/schedule.unit.test.mjs`): FSRS-4.5's forgetting curve and update rules with the
+  default weights, for a right/wrong answer only. State `{s, d, due, last, reps, lapses, ok}`: stability in days, difficulty
+  1 to 10, ms times, `ok` = last answer right. Right grows the interval (never shortens it); wrong lowers stability, raises
+  difficulty and brings the card back in 10 minutes.
+- Deck (`testDeck`): due now first (most overdue first), then lines never answered (file order), then the rest soonest due
+  first (a recent miss before a long interval). Made when the data, filter or first states change, never on an answer.
+  Lines without a question, with an open flag (owner's `/api/flags`) or sent back are left out.
+- Grading: an MCQ by the pick; a statement or blank by Show answer, then Right / Wrong. Score per topic is lines whose last
+  answer was right, of those answered (`topicScores`), shown as "Score R/A · Topic r/a" with the full list under it.
+- State: `spaces/_/recall/{uid}~{line}` (same id rule as verdicts), one doc per person and line, written through
+  `app.recall` (`cloud.js`, same write queue as verdicts). Rules allow admin, member and viewer to write their own; no delete.
+- "This fact is wrong" (owner only): a verdict on `wrong:<line>` with choice `flag` and the line as text, flushed to the queue
+  (`worker/flush.js` ACTION). The standing processor turns the queue item into a new open row in the flags file. Until then the
+  line is marked sent back on this device (its `wrong:` verdict, up to 7 days) and is out of the deck. A wrong answer only
+  reschedules; it never edits the notes.
+- Tests: `e2e/test.spec.mjs` reuses `e2e/fixtures/data/` and `flags.json`. It clears recall docs and `wrong:` verdicts; Align's
+  spec leaves `wrong:` verdicts alone because the two files run in different workers.
+- For the Log tab: `ask.js` (`el`, `ago`, `askCard`), `cards.js` (`flaggedIds`, `WRONG`, `RECALL`), `schedule.js`.

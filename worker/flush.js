@@ -17,8 +17,9 @@ import { DEFAULT_ADMINS } from './members.js';
 
 export const REPO = 'flamingbeing/anaesfacts-private';
 const API = `https://api.github.com/repos/${REPO}/contents/`;
-// the answers that ask for a change to the notes; agree, me-wrong and seen only move the mark
-export const ACTION = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep', 'add'];
+// the answers that ask for a change to the notes (flag: the Test tab's "This fact is wrong", fact wrong:<line id>, text = the line);
+// agree, me-wrong and seen only move the mark
+export const ACTION = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep', 'add', 'flag'];
 const PAGE = 200, PAGES = 5;
 
 /** @param {any} token */

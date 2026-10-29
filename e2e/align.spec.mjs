@@ -6,8 +6,8 @@ import { DEFAULT_ADMINS } from '../worker/members.js';
 // the verdicts are one shared set ('_'), so this file's tests run one at a time, each from none (the jank gate at the
 // end lives here too: a second file would run in another worker and wipe the verdicts under these)
 test.describe.configure({ mode: 'serial' });
-// every verdict there (ids are the person's uid and the line), each test from none
-test.beforeEach(async () => { for (const d of await db.list('spaces/_/verdicts')) await db.del(`spaces/_/verdicts/${d.by}~${d.fact.replaceAll(/[/#]/g, '~')}`); });
+// every verdict there but the Test tab's sent-back ones and the Add tab's (their specs clear their own; they run in other workers), each test from none
+test.beforeEach(async () => { for (const d of await db.list('spaces/_/verdicts')) if (!/^(wrong|add):/.test(d.fact)) await db.del(`spaces/_/verdicts/${d.by}~${d.fact.replaceAll(/[/#]/g, '~')}`); });
 
 const tabLink = '.ui-tab[data-tab-page="#align-page"]:visible, .ui-side-link[data-tab-page="#align-page"]:visible';
 /** @param {import('@playwright/test').Page} page */

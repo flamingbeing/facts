@@ -12,6 +12,7 @@ import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/u
 import { AREA_NAMES, cardsFrom, queue, flagDeck, questionFor, plain, seenFrom } from '../cards.js';
 import { loadData } from '../data.js';
 import { REFUSED } from '../state.js';
+import { el, ago, askCard } from '../ask.js';
 import { $, input, dialog } from '../dom.js';
 
 /** @typedef {import('../cards.js').Fact} Line */
@@ -27,19 +28,6 @@ const LEVEL = /** @type {Record<string, string>} */ ({ high: 'High', med: 'Mediu
 // the answers the queue takes (worker/flush.js ACTION); the others need no flush
 const CHANGES = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep'];
 const FLUSH_AFTER = 15000;
-
-/** @param {string} tag @param {string} [cls] @param {string} [text] */
-const el = (tag, cls = '', text = '') => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text) e.textContent = text;
-  return e;
-};
-/** @param {number} at */
-const ago = at => {
-  const d = Math.floor((Date.now() - at) / 864e5);
-  return d < 1 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
-};
 
 /**
  * @param {{ verdict: (fact: string, choice: string, text: string, base: Verdict | null, q?: string) => Promise<string>,
@@ -136,39 +124,9 @@ export function alignScreen(app) {
     const c = el('article', 'align-card');
     c.dataset.line = line.id;
     if (line.flag) return flagCard(line, c);
-    c.append(el('p', 'align-where small', `${AREA_NAMES[line.area] ?? line.area} · ${line.title} · ${line.section}`));
     const before = mine.get(line.id);
     const q = questionFor(line, before ? Math.floor(before.at / 6e4) : 0);
-    const back = el('div', 'align-back');
-    const lineP = el('p', 'align-line', plain(line.text));
-    back.append(lineP);
-    const flip = () => { c.classList.add('answered'); touched = true; };
-    if (!q) {
-      c.classList.add('bare', 'answered');
-    } else if (q.kind === 'mcq') {
-      c.append(el('p', 'align-stem', plain(q.stem)));
-      const opts = el('div', 'align-options');
-      (q.options || []).forEach((o, k) => {
-        const b = /** @type {HTMLButtonElement} */ (el('button', '', plain(o)));
-        b.type = 'button';
-        b.addEventListener('click', () => {
-          if (c.classList.contains('answered')) return;
-          b.classList.add('picked');
-          opts.children[/** @type {number} */ (q.answer)]?.classList.add('right');
-          if (k !== q.answer) b.classList.add('wrong');
-          flip();
-        });
-        opts.append(b);
-      });
-      c.append(opts);
-    } else {
-      c.append(el('p', 'align-stem', plain(q.stem)));
-      const show = /** @type {HTMLButtonElement} */ (el('button', 'align-show', 'Show answer'));
-      show.type = 'button';
-      show.addEventListener('click', flip);
-      c.append(show);
-      back.prepend(el('p', 'align-answer', `Answer: ${plain(String(q.answer))}`));
-    }
+    const { back } = askCard(c, line, q, { onFlip: () => { touched = true; } });
     back.append(answers(line, c, q?.stem ?? ''));
     if (before) back.append(el('p', 'small align-before', `Last: ${SAID[before.choice] ?? before.choice}, ${ago(before.at)}`));
     c.append(back);

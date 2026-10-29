@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardsFrom, queue, questionFor, docId, plain, topicsOf, flagDeck } from '../src/cards.js';
+import { cardsFrom, queue, questionFor, docId, plain, topicsOf, flagDeck, flaggedIds } from '../src/cards.js';
 
 const FILES = [
   { area: 'drugs', topics: [
@@ -56,4 +56,14 @@ test('flagDeck: open flags first by level (high, cross-topic, medium, low); answ
   assert.equal(deck[1].title, facts.find(f => f.topic === 'drugs/demo-drug')?.title);
   assert.deepEqual(flagDeck(flags, facts, said, { area: 'airway' }).map(c => c.id), ['flag:H']);
   assert.deepEqual(flagDeck(flags, facts, said, { search: 'tubes' }).map(c => c.id), ['flag:H']);
+});
+
+test('flaggedIds: the lines an open flag points at (either side of a clash), matched on topic and plain text', () => {
+  const list = cardsFrom(FILES);
+  const flag = (topic, line, extra = {}) => ({ id: 'F1', topic, line, ...extra });
+  assert.deepEqual([...flaggedIds([flag('drugs/demo-drug', 'Dose **2 mg/kg**')], list)], ['drugs/demo-drug#aaa111']);
+  assert.deepEqual([...flaggedIds([flag('drugs/demo-drug', 'Dose 2 mg/kg')], list)], ['drugs/demo-drug#aaa111']);
+  assert.deepEqual([...flaggedIds([flag('drugs/demo-drug', 'Other', { topicB: 'airway/tubes', lineB: 'Size 7 for most women' })], list)], ['airway/tubes#ccc333']);
+  assert.equal(flaggedIds([flag('airway/tubes', 'Dose 2 mg/kg')], list).size, 0);
+  assert.equal(flaggedIds([], list).size, 0);
 });

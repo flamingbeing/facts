@@ -5,6 +5,7 @@
 //   members/{uid}              { role: admin | member | viewer, v }   the role doc (source of truth; admins change it
 //                              through the Worker's /api/members/, which revokes a removed person's access)
 //   spaces/_/verdicts/{id}     { fact, choice, text?, at, by, … }   Align's answers, one per person and line (cards.js docId)
+//   spaces/_/recall/{id}       { fact, s, d, due, last, reps, lapses, ok, at, by }   the Test tab's spacing, one per person and line
 //
 // Roles reach the rules as custom claims ({ g: { _: role }, v }), a cache of the role doc: the Worker's /api/claims
 // writes them. The auth module reads the role doc live (claims.watch) and asks for new claims whenever its v is ahead
@@ -26,7 +27,7 @@ import { emulator, configured, roleOf, needsClaims } from './roles.js';
 import { setHint } from './hint.js';
 import { OPTIONS, SETTINGS_COLL } from './options.js';
 import { dataModules } from './data-modules.js';
-import { VERDICTS, docId } from './cards.js';
+import { VERDICTS, RECALL, docId } from './cards.js';
 
 export { usingEmulator } from './roles.js';
 export { lastSignedIn } from './hint.js';
@@ -80,6 +81,7 @@ function deviceName() {
  * @typedef {object} Hooks
  * @property {(s: State) => void} onState
  * @property {(verdicts: import('./cards.js').Verdict[]) => void} [onVerdicts]  Align's answers as this device has them
+ * @property {(recall: (import('./schedule.js').Recall & { id: string, fact: string })[]) => void} [onRecall]  the Test tab's states as this device has them
  * @property {(byItem: Map<string, unknown[]>) => void} [onFiles]  every item's attached files (item id -> them), whenever
  *   one changes (the files recipe)
  */
@@ -106,7 +108,7 @@ export async function start({ canReload = null }) {
       },
     }),
     sync({
-      colls: [VERDICTS, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
+      colls: [VERDICTS, RECALL, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
       scope: () => SPACE, device: deviceName(), wake: true,
       // held: a same-field clash is kept on the phone that made the save until its person chooses (never overwritten);
       // edits: each write records who changed each field and when, for the popup
@@ -132,6 +134,8 @@ export async function start({ canReload = null }) {
   let offFiles = null;
   /** @type {(() => void) | null} */
   let offVerdicts = null;
+  /** @type {(() => void) | null} */
+  let offRecall = null;
   let seq = 0;
   // the token Firestore has been told about: its own token listener (added when the SDK started, so before this one)
   // runs in the same notification and restarts its connection with the new token. A list listen sent before that goes
@@ -148,11 +152,11 @@ export async function start({ canReload = null }) {
     try { claims = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { /* none */ }
     return { token, claims, stale: true };
   };
-  const stopList = () => { offFiles?.(); offFiles = null; offVerdicts?.(); offVerdicts = null; offSettings?.(); offSettings = null; };
+  const stopList = () => { offFiles?.(); offFiles = null; offVerdicts?.(); offVerdicts = null; offRecall?.(); offRecall = null; offSettings?.(); offSettings = null; };
   // the token as it is now decides what the page shows (after sign-in, and after every claims ask); the newest call wins
   show = async () => {
     if (!hooks) return;
-    const { onState, onFiles, onVerdicts } = hooks;
+    const { onState, onFiles, onVerdicts, onRecall } = hooks;
     const n = ++seq;
     await settled;
     if (n !== seq) return;
@@ -171,6 +175,7 @@ export async function start({ canReload = null }) {
     onState({ phase: 'ready', user, role });
     offSettings ??= app.settings.follow();   // the account's options, heard from other devices (listening needs the role)
     if (onVerdicts) offVerdicts ??= app.sync.watch(SPACE, VERDICTS, (/** @type {any[]} */ list) => onVerdicts(list.filter(x => !x._deleted && x.by === user.uid)));
+    if (onRecall) offRecall ??= app.sync.watch(SPACE, RECALL, (/** @type {any[]} */ list) => onRecall(list.filter(x => !x._deleted && x.by === user.uid)));
     if (onFiles && dataModules.files) offFiles ??= dataModules.files.watch(app, SPACE, onFiles);
   };
   app.auth.onUser(() => { claimsStatus = 0; void show(); });
@@ -204,6 +209,12 @@ export async function start({ canReload = null }) {
       const by = fa.currentUser?.uid || '';
       // text and q are always written ('' for none), so a later "agree" clears an earlier edit's text
       return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), q: q.slice(0, 1000), ...(section ? { section: section.slice(0, 100) } : {}), at: Date.now(), by }, base));
+    },
+    // the Test tab: the spacing state after an answer on a line (one doc per person and line); base: the doc as this device had it, if any
+    /** @param {string} fact @param {import('./schedule.js').Recall} st @param {{ id: string } | null} base @returns {Promise<string>} */
+    recall: (fact, st, base) => {
+      const by = fa.currentUser?.uid || '';
+      return refusal(app.sync.save(RECALL, SPACE, { id: docId(by, fact), fact, s: st.s, d: st.d, due: st.due, last: st.last, reps: st.reps, lapses: st.lapses, ok: st.ok, at: Date.now(), by }, base));
     },
     // the owner's queue (worker/flush.js): his saved answers go to the notes' processor; others are refused there.
     // keepalive: the page may be closing. -> '' or the reason
