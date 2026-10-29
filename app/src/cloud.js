@@ -236,11 +236,31 @@ export async function start({ canReload = null }) {
     /** @param {string} itemId @param {(item: Item | null) => void} cb @returns {() => void} */
     watchItem: (itemId, cb) => app.sync.watchDoc(['spaces', SPACE, COLL, itemId], cb),
     // Align: his answer on a line (one doc per person and line, his latest answer wins); base: the doc as this device had it, if any
-    /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @returns {Promise<string>} */
-    verdict: (fact, choice, text, base) => {
+    // q: the question he saw ('' for none), so a "bad question" names it
+    /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @param {string} [q] @returns {Promise<string>} */
+    verdict: (fact, choice, text, base, q = '') => {
       const by = fa.currentUser?.uid || '';
-      // text is always written ('' for none), so a later "agree" clears an earlier edit's text
-      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), at: Date.now(), by }, base));
+      // text and q are always written ('' for none), so a later "agree" clears an earlier edit's text
+      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), q: q.slice(0, 1000), at: Date.now(), by }, base));
+    },
+    // the owner's queue (worker/flush.js): his saved answers go to the notes' processor; others are refused there.
+    // keepalive: the page may be closing. -> '' or the reason
+    flush: async () => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        if (!token) return 'Sign in first.';
+        const r = await fetch('/api/flush', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${token}` } });
+        return r.ok ? '' : `Refused (${r.status})`;
+      } catch { return 'Offline: try again.'; }
+    },
+    // the open flags, for the owner's flag cards (worker/flush.js); anyone else gets none
+    /** @returns {Promise<import('./cards.js').Flag[]>} */
+    flags: async () => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        const r = token ? await fetch('/api/flags', { headers: { Authorization: `Bearer ${token}` } }) : null;
+        return r?.ok ? (await r.json()).flags || [] : [];
+      } catch { return []; }
     },
     // admins: set someone's role, or remove them (they lose access at once; their sessions end). -> '' or the reason
     members: {
