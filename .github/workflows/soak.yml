@@ -17,3 +17,5 @@ jobs:
       emulators: firestore,auth
       # }cloud
       unit-command: node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs' 'tools/test/*.test.mjs'
+  full:
+    uses: ./.github/workflows/full-checks.yml

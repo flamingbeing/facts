@@ -1,11 +1,9 @@
-# Checks on every PR and push to main (README, "Tests"): repo checks, unit tests and the type check, secret scan, the
-# browser tests (the real Worker in Node) and the same browser tests on a Vite build ("vite"). Jobs run side by side.
-# cloud{ (a static app has no rules, emulators or accounts; README, "Pick a starter")
-# The cloud app's: the rules in the Firestore emulator, and the browser tests run against the emulators with made-up
-# accounts. In the template repo only, the "fill" job also fills a scratch copy as a new app and runs the tests there,
-# "static" fills one as a static app (tools/fill.mjs --static) and runs its tests, and the "full" jobs add both recipes
-# (files, search) to a copy with tools/add.mjs and run the whole app. The jobs above them check the lean app.
-# }cloud
+# Checks = the QUICK checks, on every PR and push to main (README, "Tests"; ~1.5-2 min): repo checks, unit tests and
+# the type check, secret scan, the rules in the Firestore emulator, the browser tests in Chromium on a phone (the real
+# Worker in Node, the emulators, made-up accounts) split over parallel shards, and the Vite build with a short smoke
+# (the tests tagged @smoke). Jobs run side by side. Deploy waits for green.
+# Everything slower is in full-checks.yml ("Full checks": nightly with the soak, and by hand with a PR number or ref).
+# Repo variable FULL_CHECKS_ON_PRS=true (Settings, Secrets and variables, Actions, Variables) makes PRs run them too.
 # app-devkit blocks are pinned to an exact version; other actions by commit SHA (Dependabot bumps both).
 name: Checks
 on:
@@ -23,8 +21,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - uses: flamingbeing/app-devkit/setup-tools@v1.13.7
+      - uses: flamingbeing/app-devkit/setup-node@v1.14.0
+      - uses: flamingbeing/app-devkit/setup-tools@v1.14.0
       - run: node .devkit/tools/check.mjs
       - run: node .devkit/tools/proofread.mjs
       - run: node .devkit/tools/check-links.mjs .
@@ -69,10 +67,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
+      - uses: flamingbeing/app-devkit/setup-node@v1.14.0
         with:
           install: 'false'
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.14.0
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore
@@ -83,273 +81,24 @@ jobs:
   # }cloud
 
   e2e:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
-      # cloud{
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
-        with:
-          firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
-          emulators: firestore,auth
-      # }cloud
-      - if: steps.changes.outputs.app == 'true'
-        run: npx playwright test
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: steps.changes.outputs.app == 'true' && (failure())
-        with:
-          name: e2e-results
-          path: test-results
-          if-no-files-found: ignore
+    # Chromium phone, split so no shard runs much over a minute (raise `shards` when one does)
+    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
+    with:
+      shards: 3
+      emulators: firestore,auth
 
   vite:
     # Vite as a check only (README, "Switch to Vite in one PR"): build app/ into dist/ with core, Firebase and
-    # register.js kept external, then run the whole browser suite on the built page. Nothing ships from dist/.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
-      # cloud{
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
-        with:
-          firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
-          emulators: firestore,auth
-      # }cloud
-      - if: steps.changes.outputs.app == 'true'
-        run: npm run vite
-      - if: steps.changes.outputs.app == 'true'
-        name: Browser tests on the Vite build
-        run: npx playwright test
-        env:
-          APP_DIR: dist
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: steps.changes.outputs.app == 'true' && (failure())
-        with:
-          name: e2e-vite-results
-          path: test-results
-          if-no-files-found: ignore
+    # register.js kept external, then a short smoke on the built page. The whole suite on dist/ is in Full checks.
+    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
+    with:
+      name: vite
+      build-command: npm run vite
+      app-dir: dist
+      args: --grep=@smoke
+      emulators: firestore,auth
 
-  # cloud{ the template's own jobs (a static app is made from the template, not a template)
   full:
-    # the template only: the lean app is what the jobs above check; here both recipes (files, search) are added to a
-    # scratch copy with tools/add.mjs, and the whole app is checked: unit tests, type check, rules, browser tests, Worker
-    name: ${{ matrix.mode == 'plain' && 'full' || 'full-vite' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [plain, vite]
-    if: github.repository == 'flamingbeing/app-starter'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-tools@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
-        with:
-          firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
-          emulators: firestore,auth
-      - if: steps.changes.outputs.app == 'true'
-        name: Add the recipes to a scratch copy
-        run: |
-          mkdir -p "$RUNNER_TEMP/app"
-          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C "$RUNNER_TEMP/app"
-          ln -s "$GITHUB_WORKSPACE/node_modules" "$RUNNER_TEMP/app/node_modules"
-          cd "$RUNNER_TEMP/app"
-          for m in files search; do node tools/add.mjs "recipes/$m.json"; done
-          node tools/modules.mjs --check
-          jq -e '.modules.files and .modules.search' .starter.json
-      - name: Checks on the full app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/app
-        run: |
-          node tools/modules.mjs --check
-          node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs'
-          npm run typecheck
-      - name: Rules on the full app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/app/app
-        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-facts "node --test test/rules.test.mjs"
-      - name: Browser tests on the full app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/app
-        run: npx playwright test
-      - name: Vite build of the full app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/app
-        run: npm run vite
-      - name: Browser tests on the full app's Vite build
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/app
-        run: npx playwright test
-        env:
-          APP_DIR: dist
-      - name: Worker build of the full app (wrangler dry run, no account)
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/app
-        run: npx -y wrangler@4.45.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker-out"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: steps.changes.outputs.app == 'true' && (failure())
-        with:
-          name: full-results-${{ matrix.mode }}
-          path: ${{ runner.temp }}/app/test-results
-          if-no-files-found: ignore
-
-  fill:
-    # two jobs in parallel (plain, vite): the plain and Vite browser runs each took ~half of the old single job
-    name: ${{ matrix.mode == 'plain' && 'fill' || 'fill-vite' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [plain, vite]
-    # the template only: fill a scratch copy as a new app, then run its checks, rules and browser tests there
-    if: github.repository == 'flamingbeing/app-starter'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
-        with:
-          firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
-          emulators: firestore,auth
-      - if: steps.changes.outputs.app == 'true'
-        name: Fill a scratch copy
-        run: |
-          mkdir -p "$RUNNER_TEMP/new-app"
-          tar --exclude=.git -cf - . | tar -xf - -C "$RUNNER_TEMP/new-app"
-          cd "$RUNNER_TEMP/new-app"
-          # a made-up web config (what `firebase apps:sdkconfig WEB` prints): the "configured" path, not the blank one
-          FAKE_KEY="fake-$(openssl rand -hex 8)"
-          jq -n --arg k "$FAKE_KEY" '{sdkConfig: {projectId: "fill-check-app", apiKey: $k, appId: "1:0:web:made-up"}}' > "$RUNNER_TEMP/web-config.json"
-          ARGS=(--name fill-check --host fill-check.example.net --kit nuhs --project fill-check-app --web-config "$RUNNER_TEMP/web-config.json" --commit "$GITHUB_SHA")
-          node tools/fill.mjs "${ARGS[@]}"
-          node tools/fill.mjs "${ARGS[@]}" --check
-          grep -qF "$FAKE_KEY" app/src/config.js
-          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs --exclude=claims.js --exclude=custom-token.js -e 'facts' -e 'app\.example\.com' .
-      - name: Checks on the filled app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/new-app
-        run: |
-          node .devkit/tools/check.mjs
-          node tools/stamp-versions.mjs app --check
-          node tools/modules.mjs --check
-          node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs'
-          npm run typecheck
-      - name: Rules on the filled app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/new-app/app
-        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-fill-check "node --test test/rules.test.mjs"
-      - name: Browser tests on the filled app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/new-app
-        run: npx playwright test
-      - name: Vite build of the filled app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/new-app
-        run: npm run vite
-      - name: Browser tests on the filled app's Vite build
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/new-app
-        run: npx playwright test
-        env:
-          APP_DIR: dist
-      - name: Worker build of the filled app (wrangler dry run, no account)
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/new-app
-        run: npx -y wrangler@4.45.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker-out"
-
-  static:
-    # the template only: fill a scratch copy as a static app (no sign-in, the list on the device; README, "Pick a
-    # starter"), then run its checks, unit tests, type check and browser tests there, and the same on its Vite build
-    name: ${{ matrix.mode == 'plain' && 'static' || 'static-vite' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [plain, vite]
-    if: github.repository == 'flamingbeing/app-starter'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-tools@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
-      - if: steps.changes.outputs.app == 'true'
-        name: Fill a scratch copy as a static app
-        run: |
-          mkdir -p "$RUNNER_TEMP/static-app"
-          tar --exclude=.git -cf - . | tar -xf - -C "$RUNNER_TEMP/static-app"
-          cd "$RUNNER_TEMP/static-app"
-          ARGS=(--name static-check --host static-check.example.net --kit nuhs --commit "$GITHUB_SHA")
-          node tools/fill.mjs "${ARGS[@]}" --static
-          node tools/fill.mjs "${ARGS[@]}" --check
-          jq -e '.flavour == "static" and .app.project == ""' .starter.json
-          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs -e 'facts' -e 'app\.example\.com' .
-          ! grep -rIlE --exclude-dir=node_modules -e '^\s*(//|#|<!--) *(cloud\{|\}cloud)' app e2e worker tools .github
-      - name: Checks on the static app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/static-app
-        run: |
-          node .devkit/tools/check.mjs
-          node tools/stamp-versions.mjs app --check
-          node tools/modules.mjs --check
-          node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs' 'tools/test/*.test.mjs'
-          npm run typecheck
-      - name: Browser tests on the static app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/static-app
-        run: npx playwright test
-      - name: Vite build of the static app
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/static-app
-        run: npm run vite
-      - name: Browser tests on the static app's Vite build
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'vite')
-        working-directory: ${{ runner.temp }}/static-app
-        run: npx playwright test
-        env:
-          APP_DIR: dist
-      - name: Worker build of the static app (wrangler dry run, no account)
-        if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
-        working-directory: ${{ runner.temp }}/static-app
-        run: npx -y wrangler@4.45.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker-out"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        if: steps.changes.outputs.app == 'true' && (failure())
-        with:
-          name: static-results-${{ matrix.mode }}
-          path: ${{ runner.temp }}/static-app/test-results
-          if-no-files-found: ignore
-  # }cloud
+    # the repo variable FULL_CHECKS_ON_PRS=true (a vital app) runs Full checks on its PRs as well
+    if: github.event_name == 'pull_request' && vars.FULL_CHECKS_ON_PRS == 'true'
+    uses: ./.github/workflows/full-checks.yml

@@ -69,9 +69,15 @@ Every change keeps the app:
 node .devkit/tools/check.mjs
 node tools/modules.mjs --check
 node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs' 'tools/test/*.test.mjs'
-npm run rules && npm run e2e
-npm run vite && APP_DIR=dist npm run e2e
+npm run typecheck
 ```
+
+Locally only these, plus the one spec you are fixing (`npx playwright test e2e/<file>`). Browser and rules tests run on
+GitHub: Checks on every PR is the quick set (unit, type check, rules, Chromium phone tests in shards, Vite build and
+`@smoke`); merge on its green. Full checks (`full-checks.yml`: the whole suite on the Vite build and any slower runs)
+run nightly with the soak and on request (Actions, "Full checks", Run workflow, `ref` = a PR number); set the repo
+variable `FULL_CHECKS_ON_PRS=true` to run them on every PR. Tag one to three tests `{ tag: '@smoke' }` (sign-in screen,
+the main flow) for the Vite smoke. Never run the full browser suite locally first.
 
 ## Working with the owner
 

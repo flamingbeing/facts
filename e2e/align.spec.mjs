@@ -29,7 +29,7 @@ const verdictOf = async (fact, choice) => {
   return doc;
 };
 
-test('an MCQ card: a tap shows the line and the right option; an answer is saved and the next card comes', async ({ phone }) => {
+test('an MCQ card: a tap shows the line and the right option; an answer is saved and the next card comes', { tag: '@smoke' }, async ({ phone }) => {
   const page = await phone();
   await signIn(page, 'member');
   await synced(page);
