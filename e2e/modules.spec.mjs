@@ -42,6 +42,8 @@ test('forget this device: refused while unsent, then wipes the phone', async ({ 
   await synced(page);
   await page.context().setOffline(true);
   await seenOne(page);
+  // a swipe made as the notes arrive is lost when the deck is rebuilt, so swipe again until a save is queued (status leaves 'synced')
+  await expect.poll(() => page.evaluate(() => { if (window.starter.status !== 'synced') return true; window.align?.go(1); return false; }), { timeout: 20_000 }).toBe(true);
   await openSettings(page);
   await page.click('#sign-out');
   await openAlign(page);

@@ -60,6 +60,9 @@ export async function loadData(onData) {
   for (const area of have.keys()) if (!index.areas?.[area]) { changed = true; await cache?.delete(BASE + area + '.json').catch(() => {}); }
   if (!now.size && !have.size) throw new Error('no areas');
   if (!changed) return;
-  await cache?.put(BASE + 'index.json', new Response(JSON.stringify(keep), { headers: { 'content-type': 'application/json' } })).catch(() => {});
+  // (the areas fetch side by side, so `keep` filled in as they finished: stored in the index's own order, or the next start
+  // from the cache would show them in whichever order the network answered)
+  const ordered = { areas: Object.fromEntries(Object.keys(index.areas || {}).filter(a => keep.areas[a]).map(a => [a, keep.areas[a]])) };
+  await cache?.put(BASE + 'index.json', new Response(JSON.stringify(ordered), { headers: { 'content-type': 'application/json' } })).catch(() => {});
   onData(Object.keys(index.areas || {}).filter(a => now.has(a)).map(a => /** @type {AreaFile} */ (now.get(a))), { from: 'network' });
 }
