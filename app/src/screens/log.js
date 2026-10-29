@@ -33,7 +33,7 @@ export function logScreen(app) {
   let items = null;
   /** @type {Map<string, string>} line id -> its text, from the notes */
   const lines = new Map();
-  let all = false, owner = false, ready = false, loaded = false;
+  let all = false, owner = false, ready = false, loaded = false, seen = false;   // seen: the tab has been opened (nothing is drawn before, so Align's gestures never wait on it)
 
   /** @param {string} fact @param {string} [text] -> what to call the thing answered */
   const label = (fact, text) => {
@@ -52,6 +52,7 @@ export function logScreen(app) {
   };
 
   const drawVerdicts = () => {
+    if (!seen) return;
     const rows = mine.filter(v => all || CHANGES.includes(v.choice)).sort((a, b) => b.at - a.at);
     $('log-answers').replaceChildren(...rows.slice(0, LIMIT).map(v => row(v.fact, v.choice, v.at, v.text, v.section)));
     $('log-answers-empty').hidden = !!rows.length;
@@ -84,6 +85,8 @@ export function logScreen(app) {
   // the notes' lines name the answers that carry no text; fetched the first time the tab is opened
   const open = () => {
     if (!ready) return;
+    seen = true;
+    drawVerdicts();
     if (!loaded) {
       loaded = true;
       void loadData(files => { lines.clear(); for (const l of cardsFrom(files)) lines.set(l.id, l.text); draw(); }).catch(() => { loaded = false; });
@@ -106,7 +109,7 @@ export function logScreen(app) {
       const was = owner;
       owner = ready && s.role === 'admin';
       for (const id of ['tab-log', 'side-log']) $(id).hidden = !ready;
-      if (!ready) { mine = []; items = null; loaded = false; }
+      if (!ready) { mine = []; items = null; loaded = false; seen = false; }
       if (owner !== was) { if (!owner) items = null; drawQueue(); }
     },
     verdicts(list) { mine = list; drawVerdicts(); },
