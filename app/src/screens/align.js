@@ -1,19 +1,20 @@
-// The Align screen (#align-page): one card at a time from the shared notes (data.js), a sideways swipe for the next
-// (the kit's cardPager). A card asks a question about one line (an MCQ first; a statement or a blank shows its answer
+// The Align screen (#align-page): one card at a time from the shared notes (data.js), a swipe up for the next
+// (vpager.js). A card asks a question about one line (an MCQ first; a statement or a blank shows its answer
 // on a tap), then shows the line as the notes have it and his six answers; a line with no question shows the line
 // and the answers at once. "Repo wrong" and "Edit" open the fix sheet (#fix) with the line to change. Each answer is
-// a verdict (cloud.js; one doc per line); a card swiped on with no answer is saved as 'seen', after the glide lands.
+// a verdict (cloud.js; one doc per line); a card swiped on with no answer is saved as 'seen', once the scroll lands.
 // The deck is made when the data or the filter changes (cards.js queue), not when a verdict comes in, so answering
 // never moves the cards under his finger. The owner's open flags (/api/flags) come first as flag cards: the line as
 // written (and, for a clash, the other topic's), the note and any suggested fix; Accept fix, Keep as written, Edit.
 // An answer that asks for a change is sent to the notes' queue (app.flush) a little after the finger lifts, and when
 // the page is hidden.
-import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/ui';
+import { toaster, emptyState, loadState, afterGesture } from '@core/ui';
 import { AREA_NAMES, chipOrder, cardsFrom, queue, flagDeck, questionFor, plain, seenFrom } from '../cards.js';
 import { loadData } from '../data.js';
 import { REFUSED } from '../state.js';
 import { el, ago, askCard } from '../ask.js';
 import { $, input, dialog } from '../dom.js';
+import { vPager } from '../vpager.js';
 
 /** @typedef {import('../cards.js').Fact} Line */
 /** @typedef {import('../cards.js').Verdict} Verdict */
@@ -170,7 +171,7 @@ export function alignScreen(app) {
     empty.show(!!lines.length && !deck.length);
     stage.hidden = !deck.length;
     if (!deck.length) { $('align-count').textContent = ''; return; }
-    pager = cardPager(stage, { card, onShow: shown, fill: true });
+    pager = vPager(stage, { card, onShow: shown, fill: true });
     Object.assign(window, { align: { deck: () => deck.map(l => l.id), index: () => pager?.index() ?? -1, go: (/** @type {1 | -1} */ s) => pager?.go(s) } });
   };
 

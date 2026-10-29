@@ -87,6 +87,17 @@ jobs:
       shards: 4
       emulators: firestore,auth
 
+  webkit:
+    # the tests tagged @webkit (the card decks' up-and-down scroll) on Safari's engine too (playwright.config.mjs)
+    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
+    with:
+      name: webkit
+      browsers: webkit
+      webkit-deps: true
+      test-command: env PW_WEBKIT=1 npx playwright test
+      args: --project=webkit
+      emulators: firestore,auth
+
   vite:
     # Vite as a check only (README, "Switch to Vite in one PR"): build app/ into dist/ with core, Firebase and
     # register.js kept external, then a short smoke on the built page. The whole suite on dist/ is in Full checks.

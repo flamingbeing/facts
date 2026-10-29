@@ -49,6 +49,59 @@ test('an MCQ card: a tap shows the line and the right option; an answer is saved
   expect(typeof v.by).toBe('string');
 });
 
+// The deck runs up and down (vpager.js): the next card is below. Tagged @webkit: run on WebKit too (playwright.config.mjs),
+// where a scroll stands in for the finger (WebKit has no touch input here)
+test('the cards go up and down: a scroll to the next card lands on it, the arrow keys step, a tap leaves the card where it is', { tag: '@webkit' }, async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await openAlign(page);
+  await expect(page.locator('#align-count')).toHaveText('1 of 4');
+  const count = page.locator('#align-count');
+  /** the deck scrolled smoothly to the top of the card below (1) or above (-1) */
+  const scroll = (/** @type {number} */ step) => page.evaluate(step => {
+    const d = /** @type {HTMLElement} */ (document.getElementById('align-deck'));
+    const on = /** @type {HTMLElement} */ (d.querySelector('.v-card-slot:not([aria-hidden])'));
+    const to = /** @type {HTMLElement} */ (step > 0 ? on.nextElementSibling : on.previousElementSibling);
+    d.scrollTo({ top: to.offsetTop, behavior: 'smooth' });
+  }, step);
+  await scroll(1);
+  await expect(count).toHaveText('2 of 4');
+  await scroll(-1);
+  await expect(count).toHaveText('1 of 4');
+  // left between two cards, it settles on the nearer one
+  await page.evaluate(() => { const d = document.getElementById('align-deck'); d.scrollBy({ top: d.clientHeight * 0.7 }); });
+  await expect(count).toHaveText('2 of 4');
+  await page.locator('#align-deck').focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(count).toHaveText('1 of 4');
+  await page.keyboard.press('ArrowDown');
+  await expect(count).toHaveText('2 of 4');
+  await page.keyboard.press('ArrowUp');
+  await expect(count).toHaveText('1 of 4');
+  // a tap that shows the answer grows the card; the deck stays on it (a snap left on would move to the next card)
+  const c = await card(page);
+  await c.getByRole('button', { name: '1 mg/kg' }).click();
+  await expect(c.locator('.align-line')).toHaveText('Dose 2 mg/kg IV');
+  await page.waitForTimeout(800);
+  await expect(count).toHaveText('1 of 4');
+  expect(await page.evaluate(() => { const d = document.getElementById('align-deck'); return Math.abs(d.scrollTop - d.querySelector('.v-card-slot:not([aria-hidden])').offsetTop); })).toBeLessThanOrEqual(1);
+});
+
+test('a sideways swipe on a card changes the tab, as anywhere else', async ({ phone, browserName }) => {
+  test.skip(browserName !== 'chromium', 'a real touch swipe needs CDP');
+  const page = await phone();
+  await signIn(page, 'member');
+  await openAlign(page);
+  const box = await page.locator('#align-deck').boundingBox();
+  const y = Math.round(box.y + box.height / 2), cdp = await page.context().newCDPSession(page);
+  const send = (type, x) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await send('touchStart', box.x + box.width - 40);
+  for (let k = 1; k <= 10; k++) { await new Promise(r => setTimeout(r, 16)); await send('touchMove', box.x + box.width - 40 - k * 25); }
+  await send('touchEnd', box.x + 60);
+  await expect(page.locator('#test-page')).toBeVisible();
+  await expect(page.locator('#align-count')).toHaveText('1 of 4');   // the deck did not move
+});
+
 test('a card swiped on with no answer is saved as seen; a blank shows its answer on a tap', async ({ phone }) => {
   const page = await phone();
   await signIn(page, 'member');
@@ -147,8 +200,8 @@ test('the fix sheet closed with Escape saves nothing; a swipe past a line he fix
   expect([v.choice, v.text]).toEqual(['repo-wrong', 'Dose 3 mg/kg IV']);
 });
 
-// the deck fills the screen down to the tab bar (the kit's cardPager fill), so a whole card shows with no scroll of
-// its own and the page itself does not scroll; a card taller than that scrolls in its slot
+// the deck fills the screen down to the tab bar (vpager.js fill), so a whole card shows with no scroll and the page
+// itself does not scroll; a card taller than that grows its slot and is scrolled through before the next one
 for (const width of [412, 1280]) {
   test(`the card fills the screen below the count line down to the tab bar (${width} px)`, async ({ sized }) => {
     const page = await sized(width);
@@ -158,21 +211,21 @@ for (const width of [412, 1280]) {
       const d = /** @type {HTMLElement} */ (document.getElementById('align-deck'));
       const padPx = () => { const x = document.createElement('div'); x.style.height = 'var(--pad)'; d.after(x); const h = x.getBoundingClientRect().height; x.remove(); return h; };
       const bar = document.querySelector('.ui-tabbar:not([hidden])'), b = bar?.getBoundingClientRect();
-      const slot = /** @type {HTMLElement} */ (d.querySelector('.ui-card-slot:not([inert])'));
+      const slot = /** @type {HTMLElement} */ (d.querySelector('.v-card-slot:not([aria-hidden])'));
       return { top: d.getBoundingClientRect().top, bottom: d.getBoundingClientRect().bottom, count: document.getElementById('align-count').getBoundingClientRect().bottom,
         floor: b && b.height ? b.top : innerHeight, pad: padPx(),
-        page: document.scrollingElement.scrollHeight - innerHeight, own: slot.scrollHeight - slot.clientHeight,
-        card: /** @type {HTMLElement} */ (slot.firstElementChild).getBoundingClientRect().height, slotH: slot.clientHeight };
+        page: document.scrollingElement.scrollHeight - innerHeight, own: Math.round(/** @type {HTMLElement} */ (slot.firstElementChild).getBoundingClientRect().height - d.clientHeight),
+        card: /** @type {HTMLElement} */ (slot.firstElementChild).getBoundingClientRect().height, slotH: d.clientHeight };
     });
     await expect.poll(async () => { const r = await m(); return Math.abs(r.floor - r.pad - r.bottom); }, { message: 'the deck ends one --pad above the tab bar (or the window)' }).toBeLessThanOrEqual(2);
     const r = await m();
     expect(r.top - r.count, 'it starts under the count line').toBeLessThan(40);
     expect(r.page, 'the page does not scroll').toBeLessThanOrEqual(1);
     // the whole card fits (an MCQ card keeps room for its hidden answer, so this holds at 1280 x 800 too)
-    expect(r.own, 'the card has no scroll of its own').toBe(0);
-    expect(r.card, 'the card fills its slot').toBeCloseTo(r.slotH, 0);
+    expect(r.own, 'the card is no taller than the deck').toBe(0);
+    expect(r.card, 'the card fills the deck').toBeCloseTo(r.slotH, 0);
     // a card far taller than the screen keeps the deck's height and scrolls inside it
-    await page.evaluate(() => { document.querySelector('#align-deck .ui-card-slot:not([inert]) .align-stem').textContent = 'A long question. '.repeat(300); });
+    await page.evaluate(() => { document.querySelector('#align-deck .v-card-slot:not([aria-hidden]) .align-stem').textContent = 'A long question. '.repeat(300); });
     const long = await m();
     expect(long.bottom).toBeCloseTo(r.bottom, 0);
     expect(long.own).toBeGreaterThan(0);
@@ -208,9 +261,10 @@ test('the owner gets the open flags first (high, clash, medium); an answer goes 
   await expect.poll(async () => (await db.list('flush')).some(d => d.upto >= Date.parse(v.serverAt)), { timeout: 15_000 }).toBe(true);
 });
 
-// The jank gate for Align (PLAYBOOK §0; app-ui's e2e/jank.spec.mjs is the kit's own): a card swiped on and flicked
-// back, start to landing, on a phone whose CPU is slowed 4x (the DevTools protocol, a real touch path), keeps every
-// frame on time, and the 'seen' verdict for the card left behind waits for the glide to land. A failure here is slow
+// The jank gate for Align (PLAYBOOK §0; app-ui's e2e/jank.spec.mjs is the kit's own): a card swiped up and flicked
+// back down, start to landing, on a phone whose CPU is slowed 4x (the DevTools protocol, a real touch path), keeps every
+// frame on time, and the 'seen' verdict for the card left behind waits for the scroll to land. The scroll is the
+// browser's own (vpager.js), so the glide is timed until the deck's scroll goes quiet. A failure here is slow
 // work to fix (transform and opacity only, afterGesture for the rest), never a number to loosen.
 // app-ui's budget (ms): every drag frame within frame but one, none over worst, no task over task
 const BUDGET = { frame: 20, late: 1, worst: 50, task: 50 };
@@ -219,7 +273,7 @@ const SLOWER = 4;
 /** n moves from a to b @param {number[]} a @param {number[]} b @param {number} n */
 const path = (a, b, n) => Array.from({ length: n + 1 }, (_, i) => [a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]);
 
-test('an Align card swiped on and flicked back keeps every frame on time on a slow phone', async ({ phone }) => {
+test('an Align card swiped up and flicked back down keeps every frame on time on a slow phone', async ({ phone }) => {
   const page = await phone();
   await signIn(page, 'member');
   await page.locator(tabLink).first().click();
@@ -227,7 +281,8 @@ test('an Align card swiped on and flicked back keeps every frame on time on a sl
   // the plain look: with no GPU here the glass's blur is drawn in software and drops frames a phone's GPU would not
   await page.evaluate(() => document.documentElement.classList.remove('glass'));
   await page.evaluate(() => {
-    let frames = [], tasks = [], on = false, last = 0, moved = 0, lifted = 0;
+    let frames = [], tasks = [], on = false, last = 0, moved = 0, lifted = 0, scrolled = 0;
+    document.getElementById('align-deck').addEventListener('scroll', e => { if (on) scrolled = e.timeStamp; }, { passive: true });
     new PerformanceObserver(list => { if (on) for (const e of list.getEntries()) tasks.push([e.startTime, e.startTime + e.duration]); })
       .observe({ type: 'longtask' });
     const tick = t => { if (!on) return; if (last) frames.push([last, t]); last = t; requestAnimationFrame(tick); };
@@ -235,10 +290,12 @@ test('an Align card swiped on and flicked back keeps every frame on time on a sl
     addEventListener('touchend', e => { if (on && !lifted) lifted = e.timeStamp; }, { capture: true, passive: true });
     const frame = () => new Promise(r => requestAnimationFrame(() => r(undefined)));
     window.__jank = {
-      start() { frames = []; tasks = []; last = 0; moved = lifted = 0; on = true; requestAnimationFrame(tick); },
+      start() { frames = []; tasks = []; last = 0; moved = lifted = scrolled = 0; on = true; requestAnimationFrame(tick); },
       async stop() {
+        // landed: the deck's scroll has been quiet for 300 ms (and any slide-in has finished)
+        while (!scrolled || performance.now() - scrolled < 300) await new Promise(r => setTimeout(r, 50));
         await Promise.all(document.getAnimations().map(a => a.finished.catch(() => {})));
-        const landed = /** @type {number} */ (document.timeline.currentTime);
+        const landed = Math.max(scrolled, /** @type {number} */ (document.timeline.currentTime) - 300);
         await frame(); await frame();
         on = false;
         const within = (x, y) => ([a, b]) => b > x && a < y, ms = ([a, b]) => b - a;
@@ -269,14 +326,14 @@ test('an Align card swiped on and flicked back keeps every frame on time on a sl
     expect(got.task, `${what}: no task over ${BUDGET.task} ms`).toBeLessThanOrEqual(BUDGET.task);
   };
 
-  // the swipe starts on the card's header (where), not its buttons
+  // the swipe runs up the card's middle, clear of the screen's edges
   const box = await page.locator('#align-deck').boundingBox();
-  const y = Math.round(box.y + 24), right = Math.round(box.x + box.width - 60), left = Math.round(box.x + 90);
-  await gate('align card swipe', () => drag(path([right, y], [right - 200, y], 14)));
+  const x = Math.round(box.x + box.width / 2), low = Math.round(box.y + box.height - 40), high = Math.round(box.y + 60);
+  await gate('align card swipe up', () => drag(path([x, low], [x, low - 300], 14)));
   await expect(page.locator('#align-count')).toHaveText('2 of 4');
-  await gate('align card flick back', () => drag(path([left, y], [left + 150, y], 5)));
+  await gate('align card flick down', () => drag(path([x, high], [x, high + 250], 5)));
   await expect(page.locator('#align-count')).toHaveText('1 of 4');
-  // the card left behind was saved as seen (after the glide landed)
+  // the card left behind was saved as seen (after the scroll landed)
   await expect.poll(async () => (await db.list('spaces/_/verdicts')).find(d => d.fact === 'drugs/demo-drug#aaa111')?.choice, { timeout: 15_000 }).toBe('seen');
 });
 

@@ -22,10 +22,23 @@ body { margin: 0; }
 .align-chips .chip { flex: none; border-radius: 999px; padding: .35rem .8rem; }
 .align-chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent, #fff); border-color: var(--accent); }
 #align-find { display: block; width: 100%; box-sizing: border-box; margin: var(--gap) 0 .25rem; }
-.align-card { box-sizing: border-box; height: 100%; padding: var(--pad); border-radius: 1rem;
+.v-cards { position: relative; overflow-y: auto; overflow-x: hidden; overflow-anchor: none;
+  min-height: 16rem; outline-offset: -2px; scrollbar-width: none; }
+.v-cards::-webkit-scrollbar { display: none; }
+/* no scroll-snap-type here: vpager.js turns it on only while a finger is on the stage. Left on, the browser re-snaps
+   to the next card when a card's content changes height (an answer shown), with nobody touching it */
+/* fill (vpager.js): from the stage's top on the page to the viewport's bottom, less the tab bar's room and --pad */
+.v-cards.v-cards-fill { height: max(16rem, calc(100dvh - var(--ui-cards-top, 0px) - var(--ui-tabbar-room, 0px) - var(--pad))); }
+/* proximity, not mandatory (vpager.js): mandatory re-snaps when a card taller than the stage changes size; vpager.js
+   settles a scroll left between two cards itself */
+.v-card-slot { box-sizing: border-box; min-height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; }
+.v-card-slot > * { flex: 1 0 auto; }   /* the card is at least the stage (a % min-height would not resolve here) */
+.v-card-slot[hidden] { display: none; }
+.align-card { box-sizing: border-box; padding: var(--pad); border-radius: 1rem;
   background: var(--surface-2, var(--surface, transparent)); border: 1px solid var(--line, rgba(127, 127, 127, .25)); }
 .align-where { margin: 0 0 .25rem; opacity: .75; }
-.align-stem { font-size: 1.1rem; font-weight: 600; margin: .25rem 0 .75rem; }
+.align-stem { font-size: 1.1rem; font-weight: 600; margin: .25rem 0 .6rem; }
 .align-options { display: grid; gap: .5rem; }
 .align-options button, .align-answers button, .align-show { width: 100%; text-align: left; min-height: var(--tap, 44px); }
 .align-options button.right { border-color: var(--success, #2e7d32); box-shadow: inset 4px 0 0 var(--success, #2e7d32); }
