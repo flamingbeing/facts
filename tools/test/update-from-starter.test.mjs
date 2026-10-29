@@ -202,12 +202,12 @@ test('--sync moves the lock to the new tag with npm install of that tag', () => 
 
 test('--sync refreshes the e2e core fixtures: the pinned version\'s folder, then the download', () => {
   const { app } = setup();
-  writeAll(app, { 'e2e/fixtures/core/sync/1.3.10/app.js': 'old\n', 'e2e/fixtures/core/ui/1.0.0/index.js': 'ui\n', 'tools/refresh-core-fixtures.sh': '#!/bin/sh\n' });
+  writeAll(app, { 'e2e/fixtures/core/sync/1.3.10/app.js': 'old\n', 'e2e/fixtures/core/update/0.2.0/register.js': 'update\n', 'tools/refresh-core-fixtures.sh': '#!/bin/sh\n' });
   const calls = [];
   bumpSyncIn(app, '1.4.0', { log: () => {}, exec: (cmd, args) => { calls.push([cmd, ...args]); } });
   assert.ok(fs.existsSync(path.join(app, 'e2e/fixtures/core/sync/1.4.0/app.js')));
   assert.ok(!fs.existsSync(path.join(app, 'e2e/fixtures/core/sync/1.3.10')));
-  assert.ok(fs.existsSync(path.join(app, 'e2e/fixtures/core/ui/1.0.0/index.js')), 'other kits left alone');
+  assert.ok(fs.existsSync(path.join(app, 'e2e/fixtures/core/update/0.2.0/register.js')), 'other kits left alone');
   assert.ok(calls.some(c => c[0] === 'bash' && c[1] === 'tools/refresh-core-fixtures.sh'));
   // --no-install: the folder is renamed, nothing downloaded
   const second = setup().app;

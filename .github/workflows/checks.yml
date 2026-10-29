@@ -23,8 +23,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.6
-      - uses: flamingbeing/app-devkit/setup-tools@v1.13.6
+      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
+      - uses: flamingbeing/app-devkit/setup-tools@v1.13.7
       - run: node .devkit/tools/check.mjs
       - run: node .devkit/tools/proofread.mjs
       - run: node .devkit/tools/check-links.mjs .
@@ -69,10 +69,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.6
+      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
         with:
           install: 'false'
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.6
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore
@@ -88,14 +88,14 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.6
+        uses: flamingbeing/app-devkit/changed-files@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.6
+        uses: flamingbeing/app-devkit/setup-node@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.6
+        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
       # cloud{
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.6
+        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore,auth
@@ -117,14 +117,14 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.6
+        uses: flamingbeing/app-devkit/changed-files@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.6
+        uses: flamingbeing/app-devkit/setup-node@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.6
+        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
       # cloud{
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.6
+        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore,auth
@@ -158,15 +158,15 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.6
+        uses: flamingbeing/app-devkit/changed-files@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.6
+        uses: flamingbeing/app-devkit/setup-node@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-tools@v1.13.6
+        uses: flamingbeing/app-devkit/setup-tools@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.6
+        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.6
+        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore,auth
@@ -230,13 +230,13 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.6
+        uses: flamingbeing/app-devkit/changed-files@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.6
+        uses: flamingbeing/app-devkit/setup-node@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.6
+        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-emulators@v1.13.6
+        uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore,auth
@@ -300,13 +300,13 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: changes
-        uses: flamingbeing/app-devkit/changed-files@v1.13.6
+        uses: flamingbeing/app-devkit/changed-files@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-node@v1.13.6
+        uses: flamingbeing/app-devkit/setup-node@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-tools@v1.13.6
+        uses: flamingbeing/app-devkit/setup-tools@v1.13.7
       - if: steps.changes.outputs.app == 'true'
-        uses: flamingbeing/app-devkit/setup-browser@v1.13.6
+        uses: flamingbeing/app-devkit/setup-browser@v1.13.7
       - if: steps.changes.outputs.app == 'true'
         name: Fill a scratch copy as a static app
         run: |

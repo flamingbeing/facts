@@ -342,8 +342,9 @@ export function after(dir, { install = true, changedPkg = true, log = console.lo
   }
 }
 
-// e2e/fixtures/core/<kit>/<version>/ is a frozen copy of what the pages load from core.anawj.com: the old version's
-// folder becomes the new one's (so a file list already there survives), then the download refreshes the content
+// e2e/fixtures/core/<kit>/<version>/ is a frozen copy of what the pages load from core.anawj.com (sync and update; the UI
+// kit loads live, so it has none): the old version's folder becomes the new one's (so a file list already there
+// survives), then the download refreshes the content
 function moveFixtures(dir, kit, version, { download, exec, log }) {
   const kitDir = path.join(dir, 'e2e/fixtures/core', kit);
   if (!fs.existsSync(kitDir)) return;

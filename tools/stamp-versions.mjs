@@ -34,7 +34,8 @@ export function stamp({ dir, sw = 'sw.js', date, write = true, now = Date.now(),
   for (const u of shell) {
     if (PINNED.test(u)) { manifest[u] = 'pinned'; continue; }   // an exact-pin address (core.anawj.com/update/0.2.0/...): its version is its identity
     if (/^https?:\/\//.test(u)) { manifest[u] = sha(`${u} ${now}`).slice(0, 12); continue; }   // mutable: per deploy
-    const rel = u === './' ? 'index.html' : u.split('?')[0].split('#')[0];
+    const at = u === './' ? '' : u.split('?')[0].split('#')[0];
+    const rel = at === '' || at.endsWith('/') ? `${at}index.html` : at;   // a page by its folder: its index.html
     const file = inDir(dir, rel);
     if (!fs.existsSync(file) || !fs.statSync(file).isFile()) throw new Error(`${sw}: SHELL lists ${u}, but ${rel} does not exist`);
     manifest[u] = sha(fs.readFileSync(file)).slice(0, 12);

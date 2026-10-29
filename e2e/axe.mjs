@@ -5,13 +5,16 @@ const src = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.mi
 
 // Run a tool that works inside the page (axe, a screenshot: Playwright's WebKit screenshot adds an inline <style>), and
 // drop the CSP reports it caused: they are the tool's, not the page's. The events arrive asynchronously, in WebKit well
-// after the call, so wait until no more come.
+// after the call (on a slow runner a second or more), so wait at least a second and until none come for half a second.
 export async function byTool(page, fn) {
   const before = await page.evaluate(() => (window.__csp || []).length);
   const out = await fn();
   await page.evaluate(() => new Promise(res => {
-    let last = (window.__csp || []).length, quiet = 0;
-    const t = setInterval(() => { const n = (window.__csp || []).length; quiet = n === last ? quiet + 1 : 0; last = n; if (quiet >= 6) { clearInterval(t); res(); } }, 50);
+    let last = (window.__csp || []).length, quiet = 0, ticks = 0;
+    const t = setInterval(() => {
+      const n = (window.__csp || []).length; quiet = n === last ? quiet + 1 : 0; last = n;
+      if (++ticks >= 20 && quiet >= 10) { clearInterval(t); res(); }
+    }, 50);
   }));
   await page.evaluate(n => { if (window.__csp) window.__csp.length = n; }, before);
   return out;

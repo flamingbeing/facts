@@ -3,12 +3,12 @@
 // expires and never blocks a later save made on the version shown; another window on the device sharing the outbox
 // is taken into account before anything is sent again.
 //
-// createWriteQueue({ store, backend, getOwner, normalize, online, delay, notice, sendTimeout, labels, otherPending, registry, report })
+// createWriteQueue({ store, backend, getOwner, normalize, online, delay, notice, sendTimeout, maxSending, labels, otherPending, registry, report })
 //   store: the outbox ({ put, list, get, remove, forget }). backend(owner, kind, record, base) -> result; throws
 //   { code: 'write-conflict', remote } (conflict.js checkWrite), a transient error ('unavailable',
 //   'deadline-exceeded', 'aborted': stays pending, retried with backoff) or any other error (failed). sendTimeout: a
 //   backend call that doesn't settle in this time counts as transient, so one stuck call never holds a record's saves
-//   for good. otherPending: async () -> truthy while writes sent another way (not through this queue) are not on the
+//   for good. maxSending (1.5.5, default 6): records sent at once; the others wait their turn. otherPending: async () -> truthy while writes sent another way (not through this queue) are not on the
 //   server yet; it keeps the sign-out check (flush) shut, as does a throw (can't tell). registry: the origin's outbox
 //   registry (registry.js), for apps that share sign-in on one origin: flush also refuses while another registered
 //   outbox has unsent saves for this user, and forget forgets this user in all of them.
@@ -65,6 +65,10 @@ const KEEP = 100;   // finished saves kept in the device history (the app's hist
 /** @param {any} error */
 const transient = error => error?.code === 'unavailable' || error?.code === 'deadline-exceeded' || error?.code === 'aborted';
 export const SEND_TIMEOUT = 30000;
+// (1.5.5) at most this many records are sent at once; the rest wait their turn before their sendTimeout starts, so a
+// bulk import (500 saves) confirms in turn instead of most sends missing the timeout and retrying with backoff. Turns go
+// first come first served, so a backend that waits for another record's save (settle) waits for one queued earlier.
+export const MAX_SENDING = 6;
 // Stored format (FORMATS.md): every new job carries v: JOB_FORMAT (jobs without v were written before 0.8.0, same
 // shape). Mixed versions share an origin's outboxes, so states are fixed: no new state before 2.0.
 export const JOB_FORMAT = 1;
@@ -76,7 +80,7 @@ const readers = new WeakMap();
 /** @param {{ entries: () => Job[] }} queue @returns {Job[]} */
 export function jobsNow(queue) { const fn = readers.get(queue); return fn ? fn() : queue.entries(); }
 /** @param {QueueOptions} options */
-export function createWriteQueue({ store, backend, getOwner = () => null, normalize = (_kind, value) => value, online = () => true, delay = ms => new Promise(r => setTimeout(r, ms)), notice = () => {}, sendTimeout = SEND_TIMEOUT, labels = {}, otherPending = null, registry = null, report = null, ignore = [], field = 'updatedAt', engine = [] }) {
+export function createWriteQueue({ store, backend, getOwner = () => null, normalize = (_kind, value) => value, online = () => true, delay = ms => new Promise(r => setTimeout(r, ms)), notice = () => {}, sendTimeout = SEND_TIMEOUT, labels = {}, otherPending = null, registry = null, report = null, ignore = [], field = 'updatedAt', engine = [], maxSending = MAX_SENDING }) {
   if (!store) throw new Error('createWriteQueue needs a store (the outbox)');
   /** @param {any} v */
   const bare = v => { if (!ignore.length || !v || typeof v !== 'object') return v; const out = { ...v }; for (const f of ignore) delete out[f]; return out; };
@@ -110,6 +114,12 @@ export function createWriteQueue({ store, backend, getOwner = () => null, normal
   /** @type {Map<string, { tries: number, timer?: object | null }>} */
   const waits = new Map();
   const notify = () => { for (const fn of listeners) fn(); };
+  // sends in flight (maxSending), and the records waiting for one to finish, first come first served
+  let sending = 0;
+  /** @type {(() => void)[]} */
+  const turns = [];
+  const takeTurn = async () => { while (sending >= maxSending) await new Promise(r => turns.push(/** @type {() => void} */ (r))); sending++; };
+  const endTurn = () => { sending--; turns.shift()?.(); };
   /** @type {Map<string, { kind: string, owner: string, record: Doc }>} */
   const inflight = new Map();   // saves called but not stored yet (overlay shows them)
   // puts to the store not yet finished: forget waits for them (a while at most), so none lands after the wipe
@@ -118,6 +128,7 @@ export function createWriteQueue({ store, backend, getOwner = () => null, normal
   // accounts forgotten and not opened again: a save still running for one of them stores nothing more
   /** @type {Set<string>} */
   const forgotten = new Set();
+  let lastAt = 0;   // last job time handed out: a save comes after one still being stored, same ms too (1.5.4)
   let storing = 0;   // saves called and not finished (flush waits for all of them, however many are for one record)
   /** @type {Set<{ job: Job | null }>} */
   const saves = new Set();   // the same, with each one's job once stored (pending(): 1.3.8)
@@ -174,8 +185,11 @@ export function createWriteQueue({ store, backend, getOwner = () => null, normal
         const moved = await refresh(job);
         if (!current(email, gen)) return;
         if (moved) { notify(); continue; }
+        await takeTurn();
+        // waited for a turn: signed out, offline, or the save set aside meanwhile
+        if (!current(email, gen) || !online() || job.state !== 'pending' || chainOf(id)[0] !== job) { endTurn(); if (!current(email, gen)) return; continue; }
         try {
-          const result = await send(/** @type {string} */ (email), job.kind, copy(job.record), copy(job.base), { key: job.key, ...(job.ops ? { ops: copy(job.ops) } : {}) });
+          const result = await send(/** @type {string} */ (email), job.kind, copy(job.record), copy(job.base), { key: job.key, ...(job.ops ? { ops: copy(job.ops) } : {}) }).finally(endTurn);
           if (!current(email, gen)) return;
           job.result = copy(result); job.state = 'synced'; job.error = ''; delete job.code;
         } catch (error) {
@@ -291,7 +305,7 @@ export function createWriteQueue({ store, backend, getOwner = () => null, normal
       if (meta !== undefined) job.meta = copy(meta);
     } else {
       job = { v: JOB_FORMAT, key: email + ':' + Date.now().toString(36) + ':' + Math.random().toString(36).slice(2), owner: email,
-        kind, record: copy(record), base: copy(stale?.state === 'failed' ? stale.base : base), state: held ? 'conflict' : 'pending', accepted: false, at: Math.max(Date.now(), ...jobs.map(x => x.at + 1)) };
+        kind, record: copy(record), base: copy(stale?.state === 'failed' ? stale.base : base), state: held ? 'conflict' : 'pending', accepted: false, at: lastAt = Math.max(Date.now(), lastAt + 1, ...jobs.map(x => x.at + 1)) };
       if (held) { job.remote = copy(conflict.remote ?? null); job.error = conflict.error; }
       const carried = stale && (stale.state === 'failed' || held) ? stale.ops || [] : [];   // (a held copy's ops too: 0.7.1)
       if (ops !== undefined || carried.length) job.ops = [...carried, ...(ops !== undefined ? [copy(ops)] : [])];
@@ -304,7 +318,8 @@ export function createWriteQueue({ store, backend, getOwner = () => null, normal
     // kept in the history for good, and the user told
     for (const x of over ? chain : stale && stale !== job ? [stale] : []) { x.state = 'archived'; if (over) x.kept = true; await persist(x); }
     const at = jobs.findIndex(x => x.key === job.key);   // (a rescan may have read it from the store first)
-    if (at < 0) jobs.push(job); else jobs[at] = job;
+    // (in place: the sorted copy would keep the rescan's job, which the sends then mark done while this one stays pending)
+    if (at < 0) jobs.push(job); else { jobs[at] = job; sortedFrom = null; }
     mine.job = job; unshow(); notify();
     if (over && !same(/** @type {Job} */ (previous).record, record)) notice('Your version from this device is kept in ' + recover);
     if (held) throw failure(job);
