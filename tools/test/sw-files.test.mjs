@@ -51,6 +51,11 @@ test('a built folder (no public/, bundled assets) is listed the same way', () =>
   assert.deepEqual(shellFiles({ dir, sync: engine() }), ['./', 'app.css', 'assets/index-abc.js', CORE + 'app.js', CORE + 'src/runner.js', CORE + 'src/shared.js']);
 });
 
+test('a sub-page is listed by its folder (the worker answers a page by its folder, never index.html)', () => {
+  const dir = tree({ 'index.html': page({ '@core/app': CORE + 'app.js' }), 'public/sw.js': SW, 'public/second/index.html': '', 'public/second/second.js': '' });
+  assert.deepEqual(shellFiles({ dir, sync: engine() }), ['./', 'second/', 'second/second.js', CORE + 'app.js', CORE + 'src/runner.js', CORE + 'src/shared.js']);
+});
+
 test('refuses an engine checkout at another version than the import map, a missing file and a bare import', () => {
   const dir = tree({ 'index.html': page({ '@core/app': 'https://core.anawj.com/sync/1.2.4/app.js' }), 'sw.js': SW });
   assert.throws(() => shellFiles({ dir, sync: engine() }), /1\.2\.4.*1\.2\.3/);

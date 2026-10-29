@@ -18,6 +18,9 @@ function copy({ deps = true } = {}) {
   const metaPath = path.join(dir, '.starter.json');
   const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
   if (meta.modules) { delete meta.modules; fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n'); }
+  // and its own colour, which the accent tests would read as kept
+  const cfgPath = path.join(dir, 'app/src/config.js');
+  if (fs.existsSync(cfgPath)) fs.writeFileSync(cfgPath, fs.readFileSync(cfgPath, 'utf8').replace(/,"accent":"#[0-9a-f]{6}"/, ''));
   return dir;
 }
 const read = (dir, f) => fs.readFileSync(path.join(dir, f), 'utf8');
@@ -81,6 +84,15 @@ test('the web config adds apiKey and appId, and is kept on a re-run', () => {
   assert.match(read(dir, 'app/index.html'), /<title>Pets<\/title>/);
 });
 // }cloud
+
+test('an app\'s own APP keys (look, surface) are kept', () => {
+  const dir = copy();
+  fill({ dir, ...ARGS });
+  const cfg = path.join(dir, 'app/src/config.js');
+  fs.writeFileSync(cfg, read(dir, 'app/src/config.js').replace(/("accent":"#[0-9a-f]{6}")/, '$1,"look":"e","surface":"ink"'));
+  fill({ dir, ...ARGS, title: 'Pets' });
+  assert.match(read(dir, 'app/src/config.js'), /"title":"Pets".*"look":"e","surface":"ink"/);
+});
 
 test("--accent sets the default look's colour, kept on a re-run; a bad one is refused", () => {
   const dir = copy();
@@ -173,11 +185,12 @@ test('fills name, host and kit everywhere; no Firebase config', () => {
 
 test('bad values are refused before anything changes', () => {
   const dir = copy();
+  const before = read(dir, 'app/src/config.js');
   assert.throws(() => fill({ dir, ...ARGS, name: 'Bad Name' }), /--name/);
   assert.throws(() => fill({ dir, ...ARGS, host: 'not a host' }), /--host/);
   assert.throws(() => fill({ dir, ...ARGS, kit: 'other' }), /--kit/);
   assert.throws(() => fill({ dir, ...ARGS, title: '<b>' }), /--title/);
-  assert.equal(read(dir, 'app/src/config.js'), read(ROOT, 'app/src/config.js'));
+  assert.equal(read(dir, 'app/src/config.js'), before);
 });
 
 test('arguments', () => {

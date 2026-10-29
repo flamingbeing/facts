@@ -5,4 +5,4 @@ import { applyTheme } from '@core/theme';
 import { APP } from './config.js';
 
 addEventListener('beforeinstallprompt', e => e.preventDefault());
-applyTheme({ accent: APP.accent });
+applyTheme({ accent: APP.accent, look: APP.look, surface: APP.surface });   // look E "Workspace", Violet on ink

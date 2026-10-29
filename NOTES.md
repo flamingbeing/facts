@@ -93,3 +93,20 @@ text changed). Nothing is saved, so there is no format to migrate.
   in `unknown` for a "did you mean" line. A query with no words (only filters, phrases or leave-outs) lists matches
   newest first (`newest(record)`, default `updatedAt`).
 - Later: a `toJSON`/`loadJSON` cache of the index (rebuild at start is cheap below ~10k records).
+
+## Align
+
+- Data: the notes' per-area bundles (`index.json` + `<area>.json`), served at `/data/` by `worker/data.js`. `data.js`
+  keeps the last copy in Cache Storage (`align-data-v1`), so cards show at once and offline. It then fetches `index.json`
+  fresh and refetches only the areas whose `v` changed. The index it keeps is per area, so an area that failed to
+  download is asked for again next time.
+- Deck (`cards.js` `queue`): never-seen lines first, then the ones seen longest ago. The deck is made when the data or
+  the filter changes, not when a verdict comes in, so cards never move under his finger. Once he has tapped anything,
+  a fresher copy waits for the next visit.
+- Verdicts: `spaces/_/verdicts/{uid}~{line with '/' and '#' as '~'}`, one doc per person and line, latest answer wins.
+  Text is always written ('' for none). The rules check that the id is the writer's and the line's.
+- A card swiped past with no answer is saved as `seen`, after the glide lands. This is skipped when the line already
+  has a real answer, so his fix text is never overwritten.
+- Flags (questions the notes mark as doubtful) need an owner-only route on the Worker: next step.
+- Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. `e2e/jank.spec.mjs` is the card swipe at 4x
+  CPU slowdown, with app-ui's frame budget.

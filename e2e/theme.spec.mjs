@@ -1,6 +1,7 @@
 // @core/theme: the switch sets this device's theme and density, and the choice survives a reload.
 import AxeBuilder from './axe.mjs';
 import { test, expect, APP, openSettings } from './fixtures.mjs';
+import { APP as CONFIG } from '../app/src/config.js';
 
 test('theme and density switch: kept on this device, accessible in dark', async ({ phone }) => {
   const page = await phone();
@@ -71,7 +72,7 @@ test('accent: a picked colour is kept on this device, Reset goes back to the loo
   await openSettings(page);
   const reset = page.getByRole('button', { name: 'Reset colour' });
   await expect(reset).toBeHidden();
-  await expect(page.locator('#accent-pick')).toHaveValue('#3a6390');   // the app's (config.js)
+  await expect(page.locator('#accent-pick')).toHaveValue(CONFIG.accent);   // the app's (config.js)
   await page.locator('#accent-pick').fill('#c2417a');
   await expect(reset).toBeVisible();
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -80,18 +81,26 @@ test('accent: a picked colour is kept on this device, Reset goes back to the loo
   expect(await cssVar(page, '--accent')).not.toBe('');
   await page.getByRole('button', { name: 'Reset colour' }).click();
   await expect(reset).toBeHidden();
-  await expect(page.locator('#accent-pick')).toHaveValue('#3a6390');
+  await expect(page.locator('#accent-pick')).toHaveValue(CONFIG.accent);
 });
 
-// one test a look: 24 axe runs (~1 s each) in one test passed the timeout on a slow runner
-for (let i = 0; i < 8; i++) {
-  test(`look ${i + 1} of 8 passes axe in light, dark and OLED`, async ({ phone }) => {
+// app-ui's looks (PRESETS in theme/presets.js). One test a look: 24 axe runs (~1 s each) in one test passed the timeout
+// on a slow runner
+const LOOKS = ['default', 'flat', 'soft', 'paper', 'navy', 'black', 'contrast', 'violet', 'eye'];
+
+test('the look picker offers every look', async ({ phone }) => {
+  const page = await phone();
+  await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await openSettings(page);
+  const looks = await page.locator('#preset-pick').locator('option').evaluateAll(os => os.map(o => /** @type {HTMLOptionElement} */ (o).value));
+  expect(looks).toEqual(LOOKS);
+});
+
+for (const look of LOOKS) {
+  test(`look ${look} passes axe in light, dark and OLED`, async ({ phone }) => {
     const page = await phone();
     await page.goto(APP, { waitUntil: 'domcontentloaded' });
     await openSettings(page);
-    const looks = await page.locator('#preset-pick').locator('option').evaluateAll(os => os.map(o => /** @type {HTMLOptionElement} */ (o).value));
-    expect(looks).toHaveLength(8);
-    const look = looks[i];
     await page.locator('#preset-pick').selectOption(look);
     for (const [theme, dark] of [['light', 'dark'], ['dark', 'dark'], ['dark', 'oled']]) {
       await page.getByLabel('Theme').selectOption(theme);

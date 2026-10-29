@@ -56,6 +56,26 @@ test('items: text required and at most 500 characters; no extra fields', async (
   assert.equal((await as('member').set('spaces/_/items/a', { text: 'ok', updatedAt: 1, _edits: 'x' }, at)).ok, false, '_edits is a map');
 });
 
+test('verdicts: members write their own (by and the id are them, the id is the line), one of the choices, text at most 2000; viewers only read; never deleted', async () => {
+  await emu.clear();
+  const at = { serverAt: true };
+  const v = (by, extra = {}) => ({ fact: 'drugs/demo#aaa111', choice: 'agree', at: 1, by, updatedAt: 1, ...extra });
+  const path = 'spaces/_/verdicts/u-member~drugs~demo~aaa111';
+  assert.equal((await as('member').set(path, v('u-member'), at)).ok, true);
+  assert.equal((await as('admin').set('spaces/_/verdicts/u-admin~drugs~demo~aaa111', v('u-admin', { choice: 'repo-wrong', text: 'Dose is 4 mg/kg' }), at)).ok, true);
+  assert.equal((await as('admin').set(path, v('u-admin'), at)).ok, false, 'not another person\'s doc');
+  assert.equal((await as('member').set('spaces/_/verdicts/u-member~airway~x~y', v('u-member'), at)).ok, false, 'the id is the line\'s');
+  assert.equal((await as('member').set(path, v('u-member'))).ok, false, 'unstamped');
+  assert.equal((await as('member').set(path, v('u-admin'), at)).ok, false, 'by is the writer');
+  assert.equal((await as('member').set(path, v('u-member', { choice: 'maybe' }), at)).ok, false, 'a known choice');
+  assert.equal((await as('member').set(path, v('u-member', { text: 'x'.repeat(2001) }), at)).ok, false, 'text at most 2000');
+  assert.equal((await as('member').set(path, v('u-member', { at: 'now' }), at)).ok, false, 'at is a number');
+  assert.equal((await as('member').set(path, v('u-member', { note: 'x' }), at)).ok, false, 'no extra fields');
+  assert.equal((await as('viewer').set('spaces/_/verdicts/u-viewer~drugs~demo~aaa111', v('u-viewer'), at)).ok, false, 'viewers only read');
+  assert.equal((await as('viewer').get(path)).ok, true);
+  assert.equal((await as('admin').delete(path)).ok, false, 'never deleted');
+});
+
 test('bin entries: writers stamp them; viewers only read', async () => {
   await emu.clear();
   const entry = { id: 'a', kind: 'items', data: { text: 'ok' }, deletedAt: 2, updatedAt: 2 };

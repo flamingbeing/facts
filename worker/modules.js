@@ -3,8 +3,10 @@
 //   { match(url) -> boolean, handle(request, env, { url, local, project }) -> Promise<Response> }
 // and sites.js asks each in turn, after its own /api/ routes; the security headers are added to its answer there.
 // add: worker imports
+import { dataRoute } from './data.js';
 
 /** @type {{ match(url: URL): boolean, handle(request: Request, env: any, ctx: { url: URL, local: boolean, project: string }): Promise<Response> }[]} */
 export const ROUTES = [
+  dataRoute,   // the app's own: facts and questions (data.js)
   // add: worker routes
 ];

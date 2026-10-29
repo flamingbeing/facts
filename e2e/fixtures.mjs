@@ -30,23 +30,53 @@ async function routeSync(context, served) {
   });
 }
 
-// Hermetic: the pages load the UI kit and core files from core.anawj.com, a stylesheet from design.flamingbeing.com and
-// (Firebase Auth's SDK) Google's gapi scripts. A stalled fetch to any of them made tests swing with the internet, so the
-// core files come from e2e/fixtures/core/ (a copy of the pinned versions: refresh with tools/refresh-core-fixtures.sh
-// after changing a version), the stylesheet is empty and the Google hosts are refused. A core file not in the copy fails loudly.
-const CORE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'core');
+// UI_DIR: a local app-ui checkout served in place of core.anawj.com/ui/<version>/, so a candidate (an unreleased
+// app-ui change) can be tried in this app before it is released
+const UI_DIR = process.env.UI_DIR ? path.resolve(process.env.UI_DIR) : '';
 const TYPES = { '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
+async function routeUi(context) {
+  await context.route(/^https:\/\/core\.anawj\.com\/ui\/[^/]+\/(.+)$/, route => {
+    const rel = new URL(route.request().url()).pathname.split('/').slice(3).join('/');
+    const file = path.join(UI_DIR, rel);
+    if (!file.startsWith(UI_DIR + path.sep) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: 'not in UI_DIR' });
+    return route.fulfill({ status: 200, contentType: TYPES[path.extname(file)] ?? 'application/octet-stream', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(file) });
+  });
+}
+
+// The UI kit (core.anawj.com/ui/) loads live, as the app does. One failed fetch there (a 5xx, a reset) leaves the app
+// unbooted, so a failed fetch is tried again; after that the page's own request goes out as it would have.
+async function routeUiRetry(context) {
+  await context.route(/^https:\/\/core\.anawj\.com\/ui\//, async route => {
+    for (let i = 0; i < 3; i++) {
+      let response = null;
+      try { response = await route.fetch({ timeout: 8_000 }); } catch { /* retry */ }
+      if (response && response.status() < 500) return route.fulfill({ response }).catch(() => {});   // closed page: nothing to serve
+      await new Promise(r => setTimeout(r, 300 * (i + 1)));
+    }
+    await route.continue().catch(() => {});
+  });
+}
+
+// Hermetic for the rest: the pages load the sync and update modules from core.anawj.com, a stylesheet from
+// design.flamingbeing.com and (Firebase Auth's SDK) Google's gapi scripts. A stalled fetch to any of them made tests swing
+// with the internet, so those core files come from e2e/fixtures/core/ (a copy of the pinned versions: refresh with
+// tools/refresh-core-fixtures.sh after changing a version), the stylesheet is empty and the Google hosts are refused. A
+// core file not in the copy fails loudly. The UI kit falls through to the live route above (or UI_DIR).
+const CORE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'core');
 // Under app-sync's consumer test (app-devkit serve-candidate) the engine and update module come from the candidate:
 // its route sits under this one, so /sync/ and /update/ fall through to it.
 const CANDIDATE = !!process.env.SERVE_CANDIDATE_SYNC;
 async function routeHermetic(context) {
+  await routeUiRetry(context);
   await context.route(/^https:\/\/core\.anawj\.com\//, route => {
     const rel = decodeURIComponent(new URL(route.request().url()).pathname);
+    if (rel.startsWith('/ui/')) return route.fallback();
     if (CANDIDATE && /^\/(sync|update)\//.test(rel)) return route.fallback();
     const file = path.join(CORE, rel);
     if (!file.startsWith(CORE + path.sep) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: `not in e2e/fixtures/core: ${rel}` });
     return route.fulfill({ status: 200, contentType: TYPES[path.extname(file)] || 'application/octet-stream', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(file) });
   });
+  if (UI_DIR) await routeUi(context);   // registered later: wins over both routes above
   await context.route('https://design.anawj.com/**', route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await context.route(/^https:\/\/(apis|www)\.google\.com\//, route => route.abort('blockedbyclient'));
 }

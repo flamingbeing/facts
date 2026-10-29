@@ -5,6 +5,7 @@
 //   members/{uid}              { role: admin | member | viewer, v }   the role doc (source of truth; admins change it
 //                              through the Worker's /api/members/, which revokes a removed person's access)
 //   spaces/_/items/{id}        { text, updatedAt, serverAt, _edits }  the list (_edits: who changed each field, and when) ('_' is the single group)
+//   spaces/_/verdicts/{id}     { fact, choice, text?, at, by, … }   Align's answers, one per person and line (cards.js docId)
 //   spaces/_/bin/{coll:id}     { id, kind, data, deletedAt, … }       a deleted item's last version (delete to bin)
 //
 // Roles reach the rules as custom claims ({ g: { _: role }, v }), a cache of the role doc: the Worker's /api/claims
@@ -28,6 +29,7 @@ import { setHint } from './hint.js';
 import { OPTIONS, SETTINGS_COLL } from './options.js';
 import { dataModules } from './data-modules.js';
 import { COLL } from './items.js';
+import { VERDICTS, docId } from './cards.js';
 
 export { usingEmulator } from './roles.js';
 export { lastSignedIn, keepList, keptList } from './hint.js';
@@ -86,6 +88,7 @@ const binCopy = ({ serverAt, ...rest }) => JSON.parse(JSON.stringify(rest));
  * @property {(s: State) => void} onState
  * @property {(items: Item[], changed: Set<string>) => void} onList  the list as this device has it, with its unsent saves
  *   laid over; changed: the ids whose copy changed since the last call (none the first time)
+ * @property {(verdicts: import('./cards.js').Verdict[]) => void} [onVerdicts]  Align's answers as this device has them
  * @property {(byItem: Map<string, unknown[]>) => void} [onFiles]  every item's attached files (item id -> them), whenever
  *   one changes (the files recipe)
  */
@@ -112,7 +115,7 @@ export async function start({ canReload = null }) {
       },
     }),
     sync({
-      colls: [COLL, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
+      colls: [COLL, VERDICTS, SETTINGS_COLL, ...(dataModules.files ? [dataModules.files.coll] : [])], path: (/** @type {string} */ space, /** @type {string} */ coll) => ['spaces', space, coll],
       scope: () => SPACE, device: deviceName(), wake: true,
       // a delete writes the item's last version to the bin in the same transaction ({ id, kind, data, deletedAt }:
       // the other devices drop the item from it, and data keeps the deleted version)
@@ -143,6 +146,8 @@ export async function start({ canReload = null }) {
   let offList = null;
   /** @type {(() => void) | null} */
   let offFiles = null;
+  /** @type {(() => void) | null} */
+  let offVerdicts = null;
   let seq = 0;
   // the token Firestore has been told about: its own token listener (added when the SDK started, so before this one)
   // runs in the same notification and restarts its connection with the new token. A list listen sent before that goes
@@ -159,11 +164,11 @@ export async function start({ canReload = null }) {
     try { claims = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { /* none */ }
     return { token, claims, stale: true };
   };
-  const stopList = () => { offList?.(); offList = null; offFiles?.(); offFiles = null; offSettings?.(); offSettings = null; };
+  const stopList = () => { offList?.(); offList = null; offFiles?.(); offFiles = null; offVerdicts?.(); offVerdicts = null; offSettings?.(); offSettings = null; };
   // the token as it is now decides what the page shows (after sign-in, and after every claims ask); the newest call wins
   show = async () => {
     if (!hooks) return;
-    const { onState, onList, onFiles } = hooks;
+    const { onState, onList, onFiles, onVerdicts } = hooks;
     const n = ++seq;
     await settled;
     if (n !== seq) return;
@@ -186,6 +191,7 @@ export async function start({ canReload = null }) {
       onList(list.filter(x => !x._deleted), new Set(first ? [] : meta?.changed || []));
       first = false;
     });
+    if (onVerdicts) offVerdicts ??= app.sync.watch(SPACE, VERDICTS, (/** @type {any[]} */ list) => onVerdicts(list.filter(x => !x._deleted && x.by === user.uid)));
     if (onFiles && dataModules.files) offFiles ??= dataModules.files.watch(app, SPACE, onFiles);
   };
   app.auth.onUser(() => { claimsStatus = 0; void show(); });
@@ -229,6 +235,13 @@ export async function start({ canReload = null }) {
     // one item, live from the server: cb(item) when its copy changes, cb(null) once the server says it is gone -> stop()
     /** @param {string} itemId @param {(item: Item | null) => void} cb @returns {() => void} */
     watchItem: (itemId, cb) => app.sync.watchDoc(['spaces', SPACE, COLL, itemId], cb),
+    // Align: his answer on a line (one doc per person and line, his latest answer wins); base: the doc as this device had it, if any
+    /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @returns {Promise<string>} */
+    verdict: (fact, choice, text, base) => {
+      const by = fa.currentUser?.uid || '';
+      // text is always written ('' for none), so a later "agree" clears an earlier edit's text
+      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), at: Date.now(), by }, base));
+    },
     // admins: set someone's role, or remove them (they lose access at once; their sessions end). -> '' or the reason
     members: {
       /** @param {string} uid @param {'admin' | 'member' | 'viewer'} role */

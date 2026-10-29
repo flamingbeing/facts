@@ -2,7 +2,7 @@
 // app's apiKey and appId (`firebase apps:sdkconfig WEB`). A public client config, not a secret: the Firestore rules
 // decide who sees what. Until apiKey is set the app runs only against the local emulators (?emulator on localhost).
 // accent: the default look's colour (@core/theme; boot.js), set with --accent.
-export const APP = {"name":"facts","title":"Facts","host":"facts.anawj.com","accent":"#3a6390"};
+export const APP = {"name":"facts","title":"Facts","host":"facts.anawj.com","accent":"#7c5cd6","look":"e","surface":"ink"};
 export const KIT = 'https://design.anawj.com/v1/';
 export const firebaseConfig = {
   "projectId": "anaesfacts-app",

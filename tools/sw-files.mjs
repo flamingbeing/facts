@@ -83,7 +83,7 @@ function coreFiles(pkg, root, re, addresses) {
 // -> the SHELL list for app folder <dir> (sync, ui: the app-sync and app-ui packages; default: the devDependencies)
 export function shellFiles({ dir, sync = path.join(ROOT, 'node_modules/app-sync'), ui = path.join(ROOT, 'node_modules/app-ui') }) {
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-  const own = walk(dir).filter(f => f !== 'index.html' && !SKIP.some(re => re.test(f))).map(f => f.replace(/^public\//, '')).sort();
+  const own = walk(dir).filter(f => f !== 'index.html' && !SKIP.some(re => re.test(f))).map(f => f.replace(/^public\//, '').replace(/(^|\/)index\.html$/, '$1')).sort();   // a sub-page by its folder: the service worker answers a page by its folder, never index.html
   const map = Object.values(importMap(html));
   for (const u of map) {
     if (/^(\.\/|\/|[^:]+$)/.test(u) && !own.includes(u.replace(/^\.?\//, ''))) throw new Error(`the import map names ${u}, but ${dir} has no such file`);
