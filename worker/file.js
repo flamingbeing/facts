@@ -19,14 +19,14 @@ import { UPSTREAM } from './data.js';
 export const MODELS = { haiku: 'claude-haiku-5-5', sonnet: 'claude-sonnet-5-5' };
 export const AREAS = ['drugs', 'regional', 'airway', 'comorbidities', 'procedures', 'physiology', 'equipment', 'crises', 'other'];
 export const ACTIONS = ['new', 'duplicate', 'merge', 'correct'];
-export const MAX_DUMP = 12000, MAX_LINES = 60, MAX_TOKENS = 16000;
+export const MAX_DUMP = 60000, MAX_LINES = 300, MAX_TOKENS = 64000;
 // one reconcile call holds at most this much of a topic's existing lines (characters; ~35k tokens), so every call stays
 // well under 100k input tokens (Haiku's price goes up above that); a bigger topic is reconciled in chunks
 export const CHUNK = 120000;
 const SLUG = /^[a-z][a-z0-9-]{0,60}$/;
 const MAX_TOPICS = 2000, PARALLEL = 4;
 
-const json = (/** @type {unknown} */ body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+export const json = (/** @type {unknown} */ body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 const norm = (/** @type {string} */ s) => s.replace(/\s+/g, ' ').trim();
 const unbullet = (/** @type {string} */ s) => s.trim().replace(/^[-•*]\s*/, '');
 /** a line as plain words, for comparing: no bold marks, no case, no end stop */
@@ -368,6 +368,18 @@ export async function handleFile(request, { verify, ask, area, local = false }) 
   }
 }
 
+/**
+ * An area's data: the same files data.js serves, GitHub's raw files live (kept at the edge 5 minutes), the made-up set
+ * locally. -> (area) => the area JSON or null
+ * @param {any} env @param {URL} url @param {boolean} local
+ */
+export const areaReader = (env, url, local) => async (/** @type {string} */ a) => {
+  if (!/^[a-z][a-z0-9-]{0,40}$/.test(a)) return null;
+  const r = local ? await env.ASSETS.fetch(new Request(new URL(`/e2e/fixtures/data/${a}.json`, url), { method: 'GET' }))
+    : await fetch(UPSTREAM + a + '.json', /** @type {any} */ ({ cf: { cacheTtl: 300, cacheEverything: true } }));
+  return r.ok ? r.json() : null;
+};
+
 export const fileRoute = {
   /** @param {URL} url */
   match: url => url.pathname === '/api/file',
@@ -377,13 +389,7 @@ export const fileRoute = {
     return handleFile(request, {
       verify: (/** @type {string} */ t) => verifyIdToken(t, { project, emulator }),
       ask: env.ANTHROPIC_API_KEY ? anthropic(env) : null,
-      // the same files data.js serves: GitHub's raw files live (kept at the edge 5 minutes), the made-up set locally
-      area: async (/** @type {string} */ a) => {
-        if (!/^[a-z][a-z0-9-]{0,40}$/.test(a)) return null;
-        const r = local ? await env.ASSETS.fetch(new Request(new URL(`/e2e/fixtures/data/${a}.json`, url), { method: 'GET' }))
-          : await fetch(UPSTREAM + a + '.json', /** @type {any} */ ({ cf: { cacheTtl: 300, cacheEverything: true } }));
-        return r.ok ? r.json() : null;
-      },
+      area: areaReader(env, url, local),
       local,
     });
   },

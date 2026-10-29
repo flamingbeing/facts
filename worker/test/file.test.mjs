@@ -133,7 +133,7 @@ test('verdicts: number guard; unknown ids, unknown actions and no-op lines stay 
   assert.deepEqual(verdicts(JSON.stringify({ results: [{ n: 7, action: 'duplicate', id: 'd1' }] }), facts, lines), [{ action: 'new' }]);
 });
 
-test('filings: never invents; a changed number falls back to his words; the 60-fact cap; max_tokens is a cut', () => {
+test('filings: never invents; a changed number falls back to his words; the fact cap; max_tokens is a cut', () => {
   const known = new Set(['drugs/dobutamine']);
   const r = filings(JSON.stringify({ items: [
     { source: 'start at 5 mcg/kg/min', topic: 'drugs/dobutamine', section: 'Dosage', line: 'Start at 10 mcg/kg/min' },

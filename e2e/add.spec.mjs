@@ -38,7 +38,7 @@ test('one box, one route; the model toggle is Haiku by default and remembered on
   const page = await phone();
   await asOwner(page);
   await expect(page.locator('#add-mode')).toHaveCount(0);
-  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '12000');
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '60000');
   await expect(page.locator('#add-model')).toHaveText('Model: Haiku');
   await expect(page.locator('#add-model')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('#add-text').fill('Made-up fact: dose 3 mg/kg');
@@ -139,4 +139,25 @@ test('Confirm all queues a merge too', async ({ phone }) => {
   await page.locator('#add-confirm-all').click();
   await expect.poll(async () => (await mine()).length, { timeout: 15_000 }).toBe(1);
   expect((await mine())[0]).toMatchObject({ choice: 'edit', text: 'Dose **2 mg/kg** IV; made-up detail', old: 'Dose **2 mg/kg** IV', section: 'Dosage' });
+});
+
+test('Draft on a topic: cards are marked model-drafted, no Confirm all, and Confirm queues with q model-drafted', async ({ phone }) => {
+  const page = await phone();
+  await asOwner(page);
+  await page.locator('#add-draft').click();
+  await expect(page.locator('#add-draft')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '200');
+  await page.locator('#add-text').fill('Made-up topic');
+  await page.locator('#add-file').click();
+  const cards = page.locator('#add-cards .add-card');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.nth(0)).toContainText('Model-drafted');
+  await expect(page.locator('#add-confirm-all')).toBeHidden();
+  const flushed = page.waitForResponse(r => r.url().endsWith('/api/flush'));
+  await cards.nth(0).locator('.add-c-confirm').click();
+  expect((await flushed).status()).toBe(200);
+  await expect.poll(async () => (await mine()).length, { timeout: 15_000 }).toBe(1);
+  expect((await mine())[0]).toMatchObject({ choice: 'add', q: 'model-drafted' });
+  await page.locator('#add-draft').click();
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '60000');
 });

@@ -240,6 +240,18 @@ export async function start({ canReload = null }) {
         return r.ok ? { result: body } : { error: body.error || `Refused (${r.status})` };
       } catch { return { error: 'Offline: try again.' }; }
     },
+    // the Add tab's "Draft on a topic": the model writes candidate lines (worker/draft.js, owner only); each item is marked
+    // drafted, and a repeat of a line already there comes back as a duplicate.
+    /** @param {string} topic @param {[string, string, string[]][]} topics @param {'haiku' | 'sonnet'} model @returns {Promise<{ result?: { items: any[], model: string, usage: any }, error?: string }>} */
+    draft: async (topic, topics, model) => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        if (!token) return { error: 'Sign in first.' };
+        const r = await fetch('/api/draft', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, topics, model }) });
+        const body = await r.json().catch(() => ({}));
+        return r.ok ? { result: body } : { error: body.error || `Refused (${r.status})` };
+      } catch { return { error: 'Offline: try again.' }; }
+    },
     // the open flags, for the owner's flag cards (worker/flush.js); anyone else gets none
     /** @returns {Promise<import('./cards.js').Flag[]>} */
     flags: async () => {

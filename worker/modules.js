@@ -6,11 +6,13 @@
 import { dataRoute } from './data.js';
 import { flushRoute } from './flush.js';
 import { fileRoute } from './file.js';
+import { draftRoute } from './draft.js';
 
 /** @type {{ match(url: URL): boolean, handle(request: Request, env: any, ctx: { url: URL, local: boolean, project: string }): Promise<Response> }[]} */
 export const ROUTES = [
   dataRoute,   // the app's own: facts and questions (data.js)
   flushRoute,  // the app's own: the owner's queue and flags (flush.js)
   fileRoute,   // the app's own: the Add tab, files and dedupes typed or pasted facts, owner only (file.js)
+  draftRoute,  // the app's own: drafts lines on a topic he names, marked model-drafted, owner only (draft.js)
   // add: worker routes
 ];

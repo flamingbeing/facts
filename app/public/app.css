@@ -51,6 +51,8 @@ body { margin: 0; }
 #add-cards .add-card { border-top: 1px solid var(--ui-line, rgba(128, 128, 128, .35)); padding-top: .6rem; }
 #add-cards .add-card.is-working { opacity: .6; }
 #add-cards .add-card.is-change { border-left: 3px solid var(--ui-accent, #c80); padding-left: .6rem; }
+#add-cards .add-card.is-drafted { border-left: 3px dashed var(--ui-muted, #888); padding-left: .6rem; }
+.add-c-drafted { font-weight: 600; }
 .add-c-old { text-decoration: line-through; opacity: .75; }
 #add-dups { margin-top: .8rem; }
 .add-dup { border-top: 1px solid var(--ui-line, rgba(128, 128, 128, .35)); padding: .4rem 0; }

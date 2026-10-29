@@ -124,11 +124,12 @@
       </section>
       <section class="ui-screen ui-tab-page" id="add-page" aria-labelledby="add-title" hidden>
         <h1 class="ui-large-title" id="add-title">Add</h1>
-        <label for="add-text" id="add-text-label">Facts, in your own words</label>
-        <textarea id="add-text" rows="6" maxlength="12000" placeholder="One fact, or paste a whole topic or a dump of lines: each becomes its own card"></textarea>
+        <label for="add-text" id="add-text-label">In your own words: one fact or many</label>
+        <textarea id="add-text" rows="6" maxlength="60000" placeholder="One fact, or paste a whole topic or a dump of lines: each becomes its own card"></textarea>
         <div class="row">
           <button type="button" id="add-file">File</button>
           <button type="button" id="add-model" class="small" aria-pressed="false" title="Haiku is quick and cheap; Sonnet is for a hard paste">Model: Haiku</button>
+          <button type="button" id="add-draft" class="small" aria-pressed="false" title="The model writes lines on a topic you name; none is yours until you confirm it">Draft on a topic</button>
         </div>
         <p id="add-status" class="small" role="status"></p>
         <datalist id="add-topics"></datalist>

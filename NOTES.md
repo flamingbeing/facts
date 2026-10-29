@@ -114,7 +114,7 @@ text changed). Nothing is saved, so there is no format to migrate.
 ## Add tab
 
 Owner only (role admin; the tab and side link stay hidden for others, and the Worker refuses anyone else). One box (up to
-12000 characters) for one fact or a whole pasted topic or dump, one route: `screens/add.js` -> `app.file(text, topics,
+60000 characters) for one fact or a whole pasted topic or dump, one route: `screens/add.js` -> `app.file(text, topics,
 model)` (POST `/api/file`, `worker/file.js`). The page sends the topic list it already has (id, title, sections) and
 `model: 'haiku' | 'sonnet'`; the Worker maps it to `claude-haiku-5-5` (default; `output_config.effort: "low"`) or
 `claude-sonnet-5-5`; the page never names a model id. A small toggle by File picks Sonnet, remembered on this device
@@ -126,7 +126,7 @@ Two passes, raw `fetch` to the Messages API (a Worker has no SDK):
 
 1. **Split + file.** The house rules and the topic list (~590 topics, ~35k tokens) are the `system` block with
    `cache_control: ephemeral`, so a second call within 5 minutes reads them at about a tenth of the price; his text is the
-   user message. Up to 60 one-line facts per call (`MAX_LINES`), each with `source`, the exact words of his text it came
+   user message. Up to 300 one-line facts per call (`MAX_LINES`, `max_tokens` 64000), each with `source`, the exact words of his text it came
    from. A line keeps its numbers only if they match its source's (else it falls back to his words, `filing()`); an item
    whose source isn't in his text must use only numbers he gave, or it is dropped (`skipped`). Tolerant parse (`parseList`).
 2. **Reconcile.** For each existing topic touched, the Worker reads that topic's lines from the same area JSON `data.js`
@@ -150,6 +150,13 @@ private notes repo applies `edit:` items (if the line changed since, it holds th
 against a canned model (`localAsk`: everything goes to the first topic; a repeat of a line is a duplicate, "More: ..."
 merges with its first line, "Not: ..." corrects it). Tests: `worker/test/file.test.mjs` (fake Anthropic for both passes),
 `e2e/add.spec.mjs` (one worker; it clears its own `add:` and `edit:` verdicts, which Align's clean-up leaves alone).
+
+**Draft on a topic** (a toggle by File): he names a topic; `app.draft` (POST `/api/draft`, `worker/draft.js`, same door,
+model and cached system block as `/api/file`) has the model write up to 20 well-established lines. A fact is only his, so
+these are never filed quietly: every item is `drafted: true`, its card says "Model-drafted: not from you", there is no
+Confirm all, and each Confirm queues the usual `add` verdict with `q: 'model-drafted'` (rules already allow `q`) so the
+processor can tell. Drafts go through pass 2 only to set aside lines already there (`duplicate`); a draft is never offered
+as a merge or correction of his lines. Tests: `worker/test/draft.test.mjs`, `e2e/add.spec.mjs`.
 
 ### Add tab cost
 
