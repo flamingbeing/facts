@@ -10,11 +10,11 @@
     "vite": "node tools/vite-check.mjs && node tools/vite-outside-package.mjs && node tools/vite-pieces.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.1",
-    "app-sync": "github:flamingbeing/app-sync#v1.5.5",
-    "app-ui": "github:flamingbeing/app-ui#v1.0.0-rc.51",
+    "@playwright/test": "1.64.1",
+    "app-sync": "github:flamingbeing/app-sync#v1.3.13",
+    "app-ui": "github:flamingbeing/app-ui#v1.0.0-rc.1",
     "axe-core": "4.14.0",
-    "typescript": "5.8.3",
-    "vite": "6.3.5"
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
   }
 }
