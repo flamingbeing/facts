@@ -203,12 +203,13 @@ export async function start({ canReload = null }) {
     follow(h) { hooks = h; void show(); },
     // Align: his answer on a line (one doc per person and line, his latest answer wins); base: the doc as this device had it, if any
     // q: the question he saw ('' for none), so a "bad question" names it
-    // section: the Add tab's section for a new line ('' for none, and then left out)
-    /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @param {string} [q] @param {string} [section] @returns {Promise<string>} */
-    verdict: (fact, choice, text, base, q = '', section = '') => {
+    // section: the Add tab's section for a new line ('' for none, and then left out); change: an Add tab edit's old line and why
+    /** @param {string} fact @param {string} choice @param {string} text @param {import('./cards.js').Verdict | null} base @param {string} [q] @param {string} [section] @param {{ old?: string, why?: string }} [change] @returns {Promise<string>} */
+    verdict: (fact, choice, text, base, q = '', section = '', change = {}) => {
       const by = fa.currentUser?.uid || '';
       // text and q are always written ('' for none), so a later "agree" clears an earlier edit's text
-      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), q: q.slice(0, 1000), ...(section ? { section: section.slice(0, 100) } : {}), at: Date.now(), by }, base));
+      return refusal(app.sync.save(VERDICTS, SPACE, { id: docId(by, fact), fact, choice, text: text.slice(0, 2000), q: q.slice(0, 1000), ...(section ? { section: section.slice(0, 100) } : {}),
+        ...(change.old ? { old: change.old.slice(0, 2000) } : {}), ...(change.why ? { why: change.why.slice(0, 300) } : {}), at: Date.now(), by }, base));
     },
     // the Test tab: the spacing state after an answer on a line (one doc per person and line); base: the doc as this device had it, if any
     /** @param {string} fact @param {import('./schedule.js').Recall} st @param {{ id: string } | null} base @returns {Promise<string>} */
@@ -226,27 +227,17 @@ export async function start({ canReload = null }) {
         return r.ok ? '' : `Refused (${r.status})`;
       } catch { return 'Offline: try again.'; }
     },
-    // the Add tab: where a typed fact belongs and the line in house style (worker/file.js, owner only).
-    // topics: [id, title, sections][] from the notes' data. -> { ok: filing } or { error }
-    /** @param {string} text @param {[string, string, string[]][]} topics @returns {Promise<{ filing?: any, error?: string }>} */
-    file: async (text, topics) => {
+    // the Add tab: what he typed or pasted, split into one-line items, filed and checked against the notes (worker/file.js, owner
+    // only). topics: [id, title, sections][] from the notes' data; model: 'haiku' or 'sonnet'.
+    // -> { result: { items, cut, skipped, model, usage } } or { error }
+    /** @param {string} text @param {[string, string, string[]][]} topics @param {'haiku' | 'sonnet'} model @returns {Promise<{ result?: { items: any[], cut: boolean, skipped: number, model: string, usage: any }, error?: string }>} */
+    file: async (text, topics, model) => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };
-        const r = await fetch('/api/file', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics }) });
+        const r = await fetch('/api/file', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics, model }) });
         const body = await r.json().catch(() => ({}));
-        return r.ok ? { filing: body } : { error: body.error || `Refused (${r.status})` };
-      } catch { return { error: 'Offline: try again.' }; }
-    },
-    // the Add tab's "Paste notes" mode: a pasted dump split into filings (worker/file-many.js, owner only).
-    /** @param {string} text @param {[string, string, string[]][]} topics @returns {Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>} */
-    fileMany: async (text, topics) => {
-      try {
-        const token = await fa.currentUser?.getIdToken();
-        if (!token) return { error: 'Sign in first.' };
-        const r = await fetch('/api/file-many', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics }) });
-        const body = await r.json().catch(() => ({}));
-        return r.ok ? { many: body } : { error: body.error || `Refused (${r.status})` };
+        return r.ok ? { result: body } : { error: body.error || `Refused (${r.status})` };
       } catch { return { error: 'Offline: try again.' }; }
     },
     // the open flags, for the owner's flag cards (worker/flush.js); anyone else gets none

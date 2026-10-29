@@ -31,9 +31,11 @@ export const isOwner = token => token?.email_verified === true && DEFAULT_ADMINS
 /** @param {number} ms -> the SGT date, YYYY-MM-DD */
 export const sgtDate = ms => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
 
-/** a verdict doc as the queue keeps it: the line (or flag), his answer, the question he saw, when */
+/** a verdict doc as the queue keeps it: the line (or flag), his answer, the question he saw, when; an Add tab edit
+ * (merge or correct) also keeps the line it replaces (old) and why */
 /** @param {any} v */
-export const queueItem = v => ({ id: v.id, fact: v.fact, choice: v.choice, ...(v.text ? { text: v.text } : {}), ...(v.section ? { section: v.section } : {}), ...(v.q ? { q: v.q } : {}), at: v.at });
+export const queueItem = v => ({ id: v.id, fact: v.fact, choice: v.choice, ...(v.text ? { text: v.text } : {}), ...(v.section ? { section: v.section } : {}), ...(v.q ? { q: v.q } : {}),
+  ...(v.old ? { old: v.old } : {}), ...(v.why ? { why: v.why } : {}), at: v.at });
 
 /**
  * The pure part: from the verdicts since the mark, his actionable ones, merged into the day's file (no item twice:
@@ -66,6 +68,7 @@ export const logItem = i => {
   const done = typeof i.done === 'string' ? i.done : i.done ? 'done' : '', held = typeof i.held === 'string' ? i.held : i.held ? 'held' : '';
   return {
     fact: i.fact, choice: i.choice, at: i.at, ...(i.text ? { text: i.text } : {}), ...(i.section ? { section: i.section } : {}),
+    ...(i.old ? { old: i.old } : {}), ...(i.why && !held ? { reason: i.why } : {}),
     ...(held ? { status: 'held', why: held } : done ? { status: 'done', ...(/^https:\/\/github\.com\//.test(done) ? { pr: done } : { note: done }) } : { status: 'queued' }),
   };
 };

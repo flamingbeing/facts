@@ -29,16 +29,19 @@ service cloud.firestore {
     // Align's verdicts: one doc per person and line of the shared notes (id: their uid, '~', the line id with '/' and '#'
     // as '~'; cards.js docId), so one member's answer never overwrites another's. choice: what he said (cards.js CHOICES); text: his fix or edit; q: the question he saw; at: when (the queue's seen-at).
     // A flag card's fact is 'flag:<flag id>' (the flags are the owner's, from /api/flags). An Add tab line is 'add:<area>/<slug>#<time>' with choice 'add', text = the line, section = its section.
+    // An Add tab change (merge or correct of a line) is 'edit:<area>/<slug>#<line id>@<time>' with choice 'edit', text = the new line, section, old = the line it replaces, why = what changed.
     // The Test tab's "This fact is wrong" is fact 'wrong:<line id>' with choice 'flag' and text = the line (the owner's flush queues it).
     // Only members write them, and each says who; the Worker's flush (worker/flush.js) takes the owner's alone.
     match /spaces/{g}/verdicts/{id} {
       allow read: if can(g, ['admin', 'member', 'viewer']);
       allow create, update: if can(g, ['admin', 'member']) && stamped()
-        && request.resource.data.keys().hasOnly(['fact', 'choice', 'text', 'q', 'section', 'at', 'by', 'updatedAt', 'serverAt', '_edits'])
+        && request.resource.data.keys().hasOnly(['fact', 'choice', 'text', 'q', 'section', 'old', 'why', 'at', 'by', 'updatedAt', 'serverAt', '_edits'])
         && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
         && request.resource.data.fact is string && request.resource.data.fact.size() <= 200
         && request.resource.data.choice in ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add', 'flag']
         && (!('section' in request.resource.data) || (request.resource.data.section is string && request.resource.data.section.size() <= 100))
+        && (!('old' in request.resource.data) || (request.resource.data.old is string && request.resource.data.old.size() <= 2000))
+        && (!('why' in request.resource.data) || (request.resource.data.why is string && request.resource.data.why.size() <= 300))
         && (!('q' in request.resource.data) || (request.resource.data.q is string && request.resource.data.q.size() <= 1000))
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 2000))
         && request.resource.data.at is number

@@ -85,6 +85,14 @@ test('verdicts: members write their own (by and the id are them, the id is the l
   assert.equal((await as('admin').set(add, addDoc(), at)).ok, true);
   assert.equal((await as('admin').set(add, addDoc({ section: 'x'.repeat(101) }), at)).ok, false, 'section at most 100');
   assert.equal((await as('admin').set(add, addDoc({ section: 5 }), at)).ok, false, 'section is a string');
+  // the Add tab's change of a line: choice edit, fact edit:<line id>@<time>, old (at most 2000) and why (at most 300)
+  const edit = 'spaces/_/verdicts/u-admin~edit:drugs~dobutamine~d1@k1';
+  const editDoc = (extra = {}) => v('u-admin', { fact: 'edit:drugs/dobutamine#d1@k1', choice: 'edit', text: 'New line', section: 'Dosage', old: 'Old line', why: 'Lower dose.', ...extra });
+  assert.equal((await as('admin').set(edit, editDoc(), at)).ok, true);
+  assert.equal((await as('admin').set(edit, editDoc({ old: 'x'.repeat(2001) }), at)).ok, false, 'old at most 2000');
+  assert.equal((await as('admin').set(edit, editDoc({ why: 'x'.repeat(301) }), at)).ok, false, 'why at most 300');
+  assert.equal((await as('admin').set(edit, editDoc({ why: 3 }), at)).ok, false, 'why is a string');
+  assert.equal((await as('admin').set(add, addDoc({ other: 'x' }), at)).ok, false, 'no other fields');
   // the Test tab's "This fact is wrong": fact wrong:<line id>, choice flag, text = the line
   const wrong = 'spaces/_/verdicts/u-admin~wrong:drugs~dobutamine~k1';
   const flag = (extra = {}) => v('u-admin', { fact: 'wrong:drugs/dobutamine#k1', choice: 'flag', text: 'A line', ...extra });
