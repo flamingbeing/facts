@@ -1,0 +1,22 @@
+# Weekly bump PRs, grouped: one for GitHub Actions (app-devkit blocks at an exact v1.x.y, others by SHA) and one for
+# npm (the browser-test tools). Merge a bump only after this repo's Checks pass on it.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: "CI"
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ['*']
+    commit-message:
+      prefix: "Deps"

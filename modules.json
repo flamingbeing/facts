@@ -1,0 +1,26 @@
+{
+  "about": "The app's modules, named once: node tools/modules.mjs writes the import map, tsconfig paths, Vite aliases, style and modulepreload links, sw.js list, CSP hash and rules from this (README, \"Modules\").",
+  "core": {
+    "app-sync": "https://core.anawj.com/sync/",
+    "app-ui": "https://core.anawj.com/ui/"
+  },
+  "imports": {
+    "@core/app": { "core": "app-sync", "file": "app.js", "preload": true },
+    "@core/auth": { "core": "app-sync", "file": "auth.js", "preload": true },
+    "@core/sync": { "core": "app-sync", "file": "sync.js", "preload": true },
+    "@core/update": { "core": "app-sync", "file": "update.js", "preload": true },
+    "@core/ui": { "core": "app-ui", "file": "ui/index.js", "types": "./node_modules/app-ui/ui/index.js", "preload": true },
+    "@core/theme": { "core": "app-ui", "file": "theme/index.js", "types": "./node_modules/app-ui/theme/index.js", "preload": true },
+    "@core/settings": { "core": "app-ui", "file": "settings/index.js", "types": "./node_modules/app-ui/settings/index.js", "preload": true },
+    "app-update/register.js": { "url": "https://core.anawj.com/update/0.2.0/register.js", "preload": true },
+    "firebase/app": { "url": "./vendor/firebase/12.19.0/firebase-app.js", "preload": true },
+    "firebase/auth": { "url": "./vendor/firebase/12.19.0/firebase-auth.js", "preload": true },
+    "firebase/firestore": { "url": "./vendor/firebase/12.19.0/firebase-firestore.js", "preload": true }
+  },
+  "paths": {
+    "@core/*": ["./node_modules/app-sync/types/*.d.ts"],
+    "app-ui/*": ["./node_modules/app-ui/*"],
+    "zod": ["./e2e/fixtures/outside-package/vendor/zod/3.23.8/index.d.ts"]
+  },
+  "styles": []
+}

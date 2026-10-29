@@ -1,0 +1,27 @@
+{
+  // Type check only (npm run typecheck; CI): the app's own JS under strict, against app-sync's .d.ts and app-ui's JS
+  // for the pinned versions (devDependencies app-sync and app-ui, the same tags as the import map). Nothing is emitted;
+  // the browser runs the files as is.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    "skipLibCheck": true,
+    "maxNodeModuleJsDepth": 3,
+    "paths": {
+      "@core/ui": ["./node_modules/app-ui/ui/index.js"],
+      "@core/theme": ["./node_modules/app-ui/theme/index.js"],
+      "@core/settings": ["./node_modules/app-ui/settings/index.js"],
+      "@core/*": ["./node_modules/app-sync/types/*.d.ts"],
+      "app-ui/*": ["./node_modules/app-ui/*"],
+      "zod": ["./e2e/fixtures/outside-package/vendor/zod/3.23.8/index.d.ts"]
+    }
+  },
+  "include": ["app/src/**/*.js", "app/src/**/*.d.ts", "e2e/fixtures/outside-package/src/*.js"]
+}

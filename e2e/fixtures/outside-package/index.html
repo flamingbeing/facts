@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Outside package</title>
+  <script type="importmap">
+{
+  "imports": {
+    "zod": "./vendor/zod/3.23.8/index.mjs"
+  }
+}
+  </script>
+  <script type="module" src="src/register-sw.js"></script>
+  <script type="module" src="src/check-zod.js"></script>
+</head>
+<body>
+  <p id="out">loading</p>
+</body>
+</html>

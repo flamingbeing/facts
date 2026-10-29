@@ -1,0 +1,9 @@
+{
+  "version": "12.19.0",
+  "source": "https://www.gstatic.com/firebasejs/12.19.0/",
+  "files": {
+    "firebase-app.js": "39a50952b5def557337b2290069c7d7371f3515ad46c44a43b9c520f734d8d14",
+    "firebase-auth.js": "59f60ce3adcb4c85a5260e963fd14134eec088de5b18ddfb9e95771c72f65264",
+    "firebase-firestore.js": "86cfce95e3b598a2c0188a06b98fa1adc0cdb378bfc0a5ea207dd7627f7e7460"
+  }
+}

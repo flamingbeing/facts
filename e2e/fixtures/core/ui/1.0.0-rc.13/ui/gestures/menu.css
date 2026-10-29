@@ -1,0 +1,37 @@
+/* @core/ui gestures, the hold menu. One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+/* ---------- hold menu ---------- */
+.ui-menu-layer { position: fixed; inset: 0; z-index: 20; display: none; }
+.ui-menu-layer.is-open { display: block; }
+.ui-menu-safe { position: absolute; bottom: 0; width: 0; height: env(safe-area-inset-bottom, 0px); visibility: hidden; }
+.ui-menu-veil { position: absolute; inset: 0; background: var(--backdrop); animation: ui-fade var(--d-quick) var(--spring); }
+.ui-menu-preview { position: absolute; pointer-events: none; border-radius: var(--card-r, var(--radius-l)); overflow: hidden;
+  will-change: transform;   /* (its own layer from the start: Chromium otherwise leaves a dark box round it while it lifts, unless glass is on) */
+  background: var(--surface); box-shadow: var(--shadow);
+  transition: top var(--d-quick) var(--spring-snappy), transform var(--d-quick) var(--spring-snappy); }
+.ui-menu-preview.is-lifted { transform: scale(1.03); }
+.ui-menu { position: absolute; display: grid; min-width: 14rem; max-width: calc(100vw - 32px); padding: 4px;
+  background: var(--surface); color: var(--text); border: var(--border) solid var(--line); border-radius: var(--menu-r);
+  transform-origin: var(--ui-menu-origin, 50% 0); animation: ui-pop var(--d-quick) var(--spring-snappy); outline: none; }
+.glass .ui-menu { background: var(--glass-bg-thick); border-color: transparent; box-shadow: var(--glass-rim), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur-thick); backdrop-filter: var(--glass-blur-thick); }
+.ui-menu-item { display: flex; align-items: center; justify-content: space-between; gap: var(--pad); width: 100%;
+  min-height: var(--tap); border: 0; background: none; text-align: start; border-radius: calc(var(--menu-r) - 4px); }
+/* (hover only where there is a pointer: a finger's last touch would otherwise mark the item under it) */
+.ui-menu-item:focus-visible { background: var(--selection); }
+@media (hover: hover) { .ui-menu-item:hover { background: var(--selection); } }
+.ui-menu-item:is(.ui-danger, .danger) { color: var(--danger); }
+.ui-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: var(--border) solid var(--line); }
+/* a look whose menus come up as a sheet on phones (data-menu="sheet"; hold-menu.js adds is-sheet under 840 px) */
+.ui-menu.is-sheet { left: 8px; right: 8px; min-width: 0; max-width: none; padding: 28px 8px 8px;
+  border-radius: var(--sheet-r); transform-origin: 50% 100%; animation-name: ui-rise; }
+.ui-menu.is-sheet::before { content: ""; position: absolute; left: 50%; top: 10px; width: 36px; height: 5px;
+  transform: translateX(-50%); border-radius: 3px; background: var(--line); }
+.ui-menu.is-sheet .ui-menu-item { padding-inline: var(--pad); }
+.ui-menu-head { margin: 0 0 4px; padding: 0 var(--pad) 4px; color: var(--muted); font-size: .85rem; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the sheet covers the bottom: the tab bar along the edge would show beside it, under the veil, as a stray stripe */
+:root:has(.ui-menu.is-sheet) .ui-tabbar { visibility: hidden; }
+[data-hold-menu] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+[data-hold-menu].is-holding { transform: scale(.98); transition: transform var(--d-quick) var(--spring); }

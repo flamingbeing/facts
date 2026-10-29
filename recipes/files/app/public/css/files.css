@@ -1,0 +1,6 @@
+/* an item's photos and files (@core/files): thumbnails on the list, rows in the edit sheet */
+.thumbs { display: inline-flex; gap: .25rem; margin-inline-start: .5rem; vertical-align: middle; }
+.thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; background: var(--surface-2, #8882); }
+.files { list-style: none; padding: 0; }
+.files li { display: flex; align-items: center; gap: .5rem; margin: .25rem 0; }
+.files li a { flex: 1; overflow-wrap: anywhere; }

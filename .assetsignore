@@ -1,0 +1,26 @@
+# Files the Worker never serves (tools, tests, notes, config)
+.git
+.claude
+.github
+.devkit
+.starter.json
+tools
+worker
+e2e
+docs
+node_modules
+test-results
+playwright-report
+app/test
+app/firestore.app.rules
+app/firestore.rules
+app/rules
+app/firebase.json
+*.md
+wrangler.jsonc
+/package.json
+/package-lock.json
+/modules.json
+playwright.config.mjs
+dist
+vite.config.mjs

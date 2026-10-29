@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" class="glass">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Starter app</title>
+  <script type="importmap">
+{
+  "imports": {
+    "@core/app": "https://core.anawj.com/sync/1.4.0/app.js",
+    "@core/auth": "https://core.anawj.com/sync/1.4.0/auth.js",
+    "@core/sync": "https://core.anawj.com/sync/1.4.0/sync.js",
+    "@core/update": "https://core.anawj.com/sync/1.4.0/update.js",
+    "@core/ui": "https://core.anawj.com/ui/1.0.0-rc.13/ui/index.js",
+    "@core/theme": "https://core.anawj.com/ui/1.0.0-rc.13/theme/index.js",
+    "@core/settings": "https://core.anawj.com/ui/1.0.0-rc.13/settings/index.js",
+    "app-update/register.js": "https://core.anawj.com/update/0.2.0/register.js",
+    "firebase/app": "./vendor/firebase/12.19.0/firebase-app.js",
+    "firebase/auth": "./vendor/firebase/12.19.0/firebase-auth.js",
+    "firebase/firestore": "./vendor/firebase/12.19.0/firebase-firestore.js"
+  }
+}
+  </script>
+  <script src="https://core.anawj.com/ui/1.0.0-rc.13/theme/early.js"></script>
+  <link rel="modulepreload" href="https://core.anawj.com/sync/1.4.0/app.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/sync/1.4.0/auth.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/sync/1.4.0/sync.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/sync/1.4.0/update.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.13/ui/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.13/theme/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.13/settings/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/update/0.2.0/register.js" data-module>
+  <link rel="modulepreload" href="./vendor/firebase/12.19.0/firebase-app.js" data-module>
+  <link rel="modulepreload" href="./vendor/firebase/12.19.0/firebase-auth.js" data-module>
+  <link rel="modulepreload" href="./vendor/firebase/12.19.0/firebase-firestore.js" data-module>
+  <script type="module" src="src/boot.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://design.flamingbeing.com/v1/tokens.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.13/theme/theme.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.13/ui/ui.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.13/theme/glass.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.13/ui/gestures.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.13/ui/shell/shell.css">
+  <link rel="stylesheet" href="app.css">
+  <script type="module" src="src/app.js"></script>
+</head>
+<body>
+  <!-- The kit shell (ui/shell/shell.css): a bar and tab bar on a phone (the tabs are swipeable pages), a side bar from 600 px,
+       the side bar as a drawer on a phone. src/shell.js starts it. A new app adds its pages as .ui-tab-page sections and a
+       tab and a side link for each. -->
+  <div class="ui-shell">
+    <header class="ui-bar">
+      <span class="ui-bar-side" data-bar-lead><button type="button" class="ui-bar-menu" aria-label="Menu" aria-controls="side">☰</button></span>
+      <h2 class="ui-bar-title" aria-hidden="true">Starter app</h2>
+      <span class="ui-bar-side ui-bar-end"></span>
+    </header>
+
+    <nav class="ui-sidebar" id="side" aria-label="Sections">
+      <p class="ui-sidebar-name"><img class="app-mark" src="icons/icon.svg" alt="" width="28" height="28">Starter app</p>
+      <a class="ui-side-link" href="./" data-tab-page="#items-page" aria-current="page">Items</a>
+      <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
+    </nav>
+
+    <main class="ui-screens">
+      <section class="ui-screen" id="items-page" aria-labelledby="items-title">
+        <h1 class="ui-large-title" id="items-title">Items</h1>
+        <!-- cloud{ the sync chip: a static app's list is never unsent -->
+        <p class="status-line"><span id="sync-chip"></span></p>
+        <!-- }cloud -->
+        <!-- cloud{ sign-in, access and set-up: a static app has none (tools/flavour.mjs) -->
+        <div id="signed-out" hidden>
+          <img class="app-mark app-mark-big" src="icons/icon.svg" alt="" width="72" height="72">
+          <p>Sign in to see the list.</p>
+          <div id="sign-in-sheet" class="sheet"></div>
+        </div>
+        <div id="no-access" hidden>
+          <p>This account has no access yet. Ask an admin to add it.</p>
+          <p class="small">Account id: <code id="uid"></code></p>
+        </div>
+        <div id="not-set-up" hidden>
+          <p>This app isn't connected to its Firebase project yet (see README, "Fill").</p>
+        </div>
+        <!-- }cloud -->
+        <div id="list-view" hidden>
+          <div id="conflict-sheet"></div>
+          <div id="refused-list"></div>
+          <p id="edit-msg" class="small" role="status"></p>
+          <div id="list-tools"></div>
+          <form id="add" autocomplete="off">
+            <label for="new-text">New item</label>
+            <div class="row">
+              <input id="new-text" name="text" maxlength="500" required>
+              <button type="submit">Add</button>
+            </div>
+          </form>
+          <p id="count" class="small" role="status" hidden></p>
+          <div id="items-state"></div>
+          <ul id="items" class="ui-list" aria-label="Items"></ul>
+          <div id="empty"></div>
+        </div>
+      </section>
+
+      <section class="ui-screen ui-tab-page" id="settings-page" aria-labelledby="settings-title" hidden>
+        <h1 class="ui-large-title" id="settings-title">Settings</h1>
+        <!-- cloud{ -->
+        <div id="account" class="status-line">
+          <span id="who"></span>
+          <button id="sign-out" type="button" hidden>Sign out</button>
+          <p id="sign-out-msg" class="error" role="alert"></p>
+        </div>
+        <!-- }cloud -->
+        <div id="settings-host"></div>
+      </section>
+    </main>
+
+    <nav class="ui-tabbar" data-minimise aria-label="Sections">
+      <button type="button" class="ui-tab" data-tab-page="#items-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">✓</span>Items</button>
+      <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
+    </nav>
+  </div>
+
+  <div id="toasts"></div>
+
+  <dialog id="edit" aria-labelledby="edit-title">
+    <form method="dialog" id="edit-form">
+      <h2 id="edit-title">Edit item</h2>
+      <label for="edit-text">Text</label>
+      <input id="edit-text" maxlength="500" required>
+      <p id="edit-live" class="small" role="status"></p>
+      <div id="edit-extras"></div>
+      <div class="row">
+        <button id="edit-save" value="save">Save</button>
+        <button id="edit-delete" value="delete" type="button" class="danger">Delete</button>
+        <button value="cancel" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

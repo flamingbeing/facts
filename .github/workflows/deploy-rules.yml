@@ -1,0 +1,23 @@
+# Deploys the Firestore rules when they change on main (app-devkit deploy-rules, exact pin; keyless Workload Identity
+# sign-in). Repo variables FIREBASE_PROJECT, WIF_PROVIDER and RULES_DEPLOYER come from the new-app setup; until all
+# three are set the run skips. The rules tests run first in the emulator. Never runs in the template repo itself.
+name: Deploy Firestore rules
+on:
+  push:
+    branches: [main]
+    paths: ['app/firestore.rules', 'app/firestore.app.rules']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  deploy:
+    if: github.repository != 'flamingbeing/app-starter'
+    uses: flamingbeing/app-devkit/.github/workflows/deploy-rules.yml@v1.11.0
+    with:
+      working-directory: app
+      firebase-project: ${{ vars.FIREBASE_PROJECT }}
+      wif-provider: ${{ vars.WIF_PROVIDER }}
+      rules-deployer: ${{ vars.RULES_DEPLOYER }}
+      build-rules-check: firestore.app.rules
+      devkit-ref: v1.9.2

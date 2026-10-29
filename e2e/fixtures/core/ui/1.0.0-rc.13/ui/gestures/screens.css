@@ -1,0 +1,26 @@
+/* @core/ui gestures, pushed screens and Back. One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+/* ---------- pushed screens ---------- */
+.ui-screens { position: relative; overflow-x: clip; }
+.ui-screen { background: var(--bg); min-height: 60vh; }
+.ui-screen[hidden] { display: none; }
+.ui-screens.is-swiping .ui-screen:not(.is-top) { position: absolute; inset: 0 0 auto; }
+.ui-screens.is-swiping .ui-screen.is-top { position: relative; z-index: 2; box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
+/* tab pages mid-swipe (tab-pages.js): the pages beside the current one sit at its sides, out of the flow */
+.ui-screens.is-paging > .ui-screen.is-beside { position: absolute; inset: 0 0 auto; }
+/* a tapped tab's page slides in (tab-pages.js): clipped, so its start offset can't widen the page */
+.ui-screens.is-sliding { overflow-x: clip; }
+/* while a push or pop slides, the two screens overlap (as in the swipe) instead of one sitting below the other: the
+   one underneath, or the one leaving, is out of the flow */
+.ui-screen.is-under { position: absolute; inset: 0 0 auto; z-index: 0; }
+.ui-screen.is-entering { position: relative; z-index: 1; box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
+.ui-screen.is-leaving { position: absolute; inset: 0 0 auto; z-index: 1; box-shadow: -8px 0 24px rgb(0 0 0 / .12); }
+.ui-swipe-shade { position: absolute; inset: 0; z-index: 1; background: var(--backdrop); pointer-events: none; }
+.ui-back { display: inline-flex; align-items: center; gap: .25rem; border: 0; background: none; color: var(--link); padding: 0 var(--gap); }
+.ui-back::before { content: "‹"; font-size: 1.6em; line-height: 1; }
+.ui-back[hidden] { display: none; }
+/* Back in the bar (gestures.js), so the screen's own one doesn't show below it */
+.ui-screens.has-bar-back > .ui-screen > .ui-back { display: none; }
+.ui-screen > .ui-back { margin: var(--gap) 0 0; min-height: var(--tap); }
+.ui-bar-back { min-height: var(--tap); margin-inline-start: calc(var(--gap) * -1); white-space: nowrap; }

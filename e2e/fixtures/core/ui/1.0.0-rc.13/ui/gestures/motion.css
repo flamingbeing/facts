@@ -1,0 +1,18 @@
+/* @core/ui gestures, keyframes, and Still / Reduce Motion (load last). One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+@keyframes ui-fade { from { opacity: 0; } }
+@keyframes ui-pop { from { opacity: 0; transform: scale(.9); } }
+@keyframes ui-rise { from { transform: translateY(100%); } }
+
+/* Still (this device) or the device's Reduce Motion: things appear and go, nothing slides, springs or lifts */
+:root[data-motion="still"] :is(.ui-menu, .ui-menu-veil, dialog.ui-sheet[open], .ui-menu-preview, .ui-bar, .ui-bar-title, .ui-tabbar, dialog.ui-sheet, [data-hold-menu]) {
+  animation: none !important; transition: none !important; }
+:root[data-motion="still"] .ui-menu-preview.is-lifted, :root[data-motion="still"] [data-hold-menu].is-holding { transform: none; }
+:root[data-motion="still"] .ui-switch, :root[data-motion="still"] .ui-switch::before { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch, .ui-switch::before { transition: none; }
+  .ui-menu, .ui-menu-veil, dialog.ui-sheet[open], .ui-menu-preview, .ui-bar, .ui-bar-title, .ui-tabbar, dialog.ui-sheet, [data-hold-menu] {
+    animation: none !important; transition: none !important; }
+  .ui-menu-preview.is-lifted, [data-hold-menu].is-holding { transform: none; }
+}

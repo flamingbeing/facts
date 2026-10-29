@@ -1,0 +1,113 @@
+{
+  "module": "files",
+  "about": "Photos and files on items (@core/files): offline-first queue, thumbnails, EXIF date; the bytes go to the Worker's R2 bucket (worker/files.js).",
+  "root": "recipes/files",
+  "modules": {
+    "@core/files": {
+      "url": "./files/index.js",
+      "types": "./app/public/files/index.js"
+    }
+  },
+  "styles": [
+    "css/files.css"
+  ],
+  "vendor": [
+    "app/public/vendor/exifr/7.1.3",
+    "app/public/vendor/idb-keyval/6.3.0"
+  ],
+  "files": [
+    {
+      "from": "app/public/files"
+    },
+    {
+      "from": "app/src/files-data.js"
+    },
+    {
+      "from": "app/src/screens/item-files.js"
+    },
+    {
+      "from": "app/src/screens/attachments.js"
+    },
+    {
+      "from": "app/test/files.unit.test.mjs"
+    },
+    {
+      "from": "e2e/files.spec.mjs"
+    },
+    {
+      "from": "e2e/memory-bucket.mjs"
+    },
+    {
+      "from": "worker/files.js"
+    },
+    {
+      "from": "worker/test/files.test.mjs"
+    },
+    {
+      "from": "worker/files-route.js"
+    },
+    {
+      "from": "app/rules/files.rules"
+    },
+    {
+      "from": "app/test/rules/files.mjs"
+    },
+    {
+      "from": "app/public/css/files.css"
+    },
+    {
+      "to": "app/src/modules.js",
+      "after": "// add: imports",
+      "line": "import { itemFiles } from './screens/item-files.js';"
+    },
+    {
+      "to": "app/src/modules.js",
+      "after": "// add: slots",
+      "line": "  itemFiles,"
+    },
+    {
+      "to": "app/src/data-modules.js",
+      "after": "// add: imports",
+      "line": "import { filesData } from './files-data.js';"
+    },
+    {
+      "to": "app/src/data-modules.js",
+      "after": "// add: slots",
+      "line": "  files: filesData,"
+    },
+    {
+      "to": "worker/modules.js",
+      "after": "// add: worker imports",
+      "line": "import { filesRoute } from './files-route.js';"
+    },
+    {
+      "to": "worker/modules.js",
+      "after": "// add: worker routes",
+      "line": "  filesRoute,"
+    },
+    {
+      "to": "wrangler.jsonc",
+      "after": "// add: r2",
+      "block": "recipes/files/wrangler-r2.txt"
+    },
+    {
+      "to": "e2e/serve.mjs",
+      "after": "// add: e2e imports",
+      "line": "import { memoryBucket } from './memory-bucket.mjs';"
+    },
+    {
+      "to": "e2e/serve.mjs",
+      "after": "// add: e2e env",
+      "line": "  FILES: memoryBucket(),"
+    }
+  ],
+  "tsconfigInclude": [
+    "app/public/files/*"
+  ],
+  "needs": [
+    "make the files bucket once before the first deploy: npx wrangler r2 bucket create <name>-files (the deploy fails without it)"
+  ],
+  "docs": [
+    "files: the data side is app/src/files-data.js, the sheet and list parts are app/src/screens/item-files.js; the Worker route is worker/files.js, listed in worker/modules.js through worker/files-route.js (100 MB cap, the same ID token check as /api/claims); the rules are app/rules/files.rules and the styles app/public/css/files.css."
+  ]
+}

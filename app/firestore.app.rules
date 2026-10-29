@@ -1,0 +1,53 @@
+rules_version = '2';
+// The app's rules. Edit this file, then build: node .devkit/tools/build-rules.mjs app/firestore.app.rules
+// (writes firestore.rules, which is what deploys and the emulator use; CI fails when it is stale).
+// Roles come from custom claims (app-devkit rules kit): { g: { _: role }, x, v, m }; '_' is the single group.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // devkit:common
+
+    // The role docs: each person reads their own (the page watches its v), admins read all. Only the Worker writes them
+    // (/api/members/, worker/members.js): a removal there also revokes the account, which a page's delete could not.
+    match /members/{uid} {
+      allow read: if (isSignedIn() && request.auth.uid == uid) || can('_', ['admin']);
+      allow write: if false;
+    }
+
+    match /spaces/{g}/items/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member']) && stamped()
+        && request.resource.data.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && request.resource.data.text is string && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.updatedAt is number
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt is number)
+        && (resource == null || !('createdAt' in resource.data) || !('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if can(g, ['admin', 'member']);
+    }
+
+    // modules: rules{ written from app/rules/*.rules by node tools/modules.mjs; edit those, not this block
+    // }modules
+
+    // Each person's account options (@core/settings): one doc named by their uid, writable by them alone. The group can read the
+    // docs because a list listen cannot be proven to ask for only one (rules are not filters); keep secrets out of options.
+    // One field per option (src/options.js); null forgets a saved value.
+    match /spaces/{g}/settings/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member', 'viewer']) && request.auth.uid == id && stamped()
+        && request.resource.data.keys().hasOnly(['profile', 'itemCount', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && (!('profile' in request.resource.data) || request.resource.data.profile == null || request.resource.data.profile is string)
+        && (!('itemCount' in request.resource.data) || request.resource.data.itemCount == null || request.resource.data.itemCount is bool)
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
+    // A deleted item's last version, written in the delete's own transaction (cloud.js onCommit).
+    match /spaces/{g}/bin/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member']) && stamped()
+        && request.resource.data.keys().hasOnly(['id', 'kind', 'data', 'deletedAt', 'updatedAt', 'serverAt']);
+    }
+  }
+}

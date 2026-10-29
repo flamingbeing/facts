@@ -1,0 +1,30 @@
+/* @core/ui gestures, the tab bar (and the pressed state of rows, tabs and menu items). One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+/* ---------- tab bar ---------- */
+.ui-tabbar { position: fixed; z-index: 6; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + var(--gap));
+  transform: translateX(-50%); display: flex; gap: 2px; padding: 4px; max-width: calc(100% - 2 * var(--pad));
+  background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--pill-r); }
+.glass .ui-tabbar { background: var(--glass-bg); border-color: transparent; box-shadow: var(--glass-rim), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.ui-tabbar[hidden] { display: none; }
+.ui-tab { display: grid; place-items: center; align-content: center; gap: 2px; min-width: var(--tap); min-height: var(--tap);
+  padding: 0 var(--pad); border: 0; border-radius: calc(var(--pill-r) - 4px); background: transparent; color: var(--muted);
+  font: inherit; font-size: .85rem; text-decoration: none; white-space: nowrap; }   /* a <button> tab looks like a link one: no chrome */
+/* an icon above the label (.ui-tab-icon: an <svg> or a character); the label goes small under it */
+.ui-tab-icon { display: block; width: 1.5rem; height: 1.5rem; font-size: 1.25rem; line-height: 1.5rem; text-align: center; }
+.ui-tab:has(.ui-tab-icon) { padding-block: 4px; font-size: .7rem; }
+/* the current tab in the link colour: the palette holds it to 4.5:1 on the ground, the surface and the selection (the
+   accent itself has no floor, and was 4.1:1 in Navy) */
+.ui-tab[aria-current="page"] { color: var(--link); font-weight: 600; background: var(--tab-active); }
+/* a look with the tab bar along the bottom edge (data-tabbar="edge"); the tabs stay together in the middle on a wide screen */
+[data-tabbar="edge"] .ui-tabbar { left: 0; right: 0; bottom: 0; transform: none; max-width: none; justify-content: center;
+  padding: 4px 4px calc(env(safe-area-inset-bottom, 0px) + 4px); border-width: var(--border) 0 0; border-radius: 0; }
+[data-tabbar="edge"] .ui-tab { flex: 1; max-width: 10rem; }
+/* scrolled down, a floating tab bar shrinks to the current tab; one along the edge keeps every tab */
+:root:not([data-tabbar="edge"]) .ui-tabbar.is-minimised .ui-tab:not([aria-current="page"]) { display: none; }
+/* pressed: rows, tabs and menu items answer on the frame the finger lands */
+:is(.ui-tab, .ui-menu-item, a.ui-row, button.ui-row, .ui-row[tabindex], .ui-row[data-push]):active { box-shadow: inset 0 0 0 100vmax var(--press); }
+/* toasts (ui.css) sit above a showing tab bar or action bar, however many are stacked: they grow upwards from there */
+:root:has(:is(.ui-tabbar, .ui-action-bar):not([hidden])) .toasts {
+  bottom: calc(var(--tap) + var(--pad) * 2 + env(safe-area-inset-bottom, 0px)); }

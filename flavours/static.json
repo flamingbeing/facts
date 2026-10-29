@@ -1,0 +1,22 @@
+{
+  "flavour": "static",
+  "about": "A static app: no sign-in, the list on this device only (IndexedDB), the same PWA, kit, tests and CI. tools/flavour.mjs renders it; node tools/add.mjs cloud turns it into the cloud app.",
+  "remove": [
+    "app/src/cloud.js", "app/src/roles.js", "app/src/screen-switch.js", "app/src/data-modules.js",
+    "app/src/screens/signed-out.js", "app/src/hint.js", "app/src/screens/no-access.js", "app/src/screens/not-set-up.js",
+    "app/firebase.json", "app/firestore.rules", "app/firestore.app.rules",
+    "app/test/rules.test.mjs", "app/test/cloud.unit.test.mjs",
+    "app/public/vendor/firebase", "tools/vendor-firebase.mjs", "tools/firebase.lock.json", "tools/test/vendor-firebase.test.mjs",
+    "worker/claims.js", "worker/custom-token.js", "worker/admin.js", "worker/members.js", "worker/test/members.test.mjs", "worker/test/devkit-copy.test.mjs",
+    "e2e/global-setup.mjs", "e2e/list.spec.mjs", "e2e/modules.spec.mjs", "e2e/offline.spec.mjs", "e2e/settings.spec.mjs", "e2e/sync.spec.mjs",
+    "e2e-live", ".github/workflows/deploy-rules.yml", ".github/workflows/live-smoke.yml",
+    "recipes/files.json", "recipes/files"
+  ],
+  "root": "flavours/static",
+  "modules": {
+    "@core/auth": null, "@core/sync": null,
+    "firebase/app": null, "firebase/auth": null, "firebase/firestore": null,
+    "@core/store": { "core": "app-sync", "file": "src/store.js", "types": "./node_modules/app-sync/types/src/store.d.ts", "preload": true }
+  },
+  "json": { "package.json": ["scripts.rules"] }
+}

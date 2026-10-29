@@ -1,0 +1,105 @@
+// Built by app-devkit tools/build-rules.mjs from firestore.app.rules and rules/common.rules. Edit those, then rebuild.
+rules_version = '2';
+// The app's rules. Edit this file, then build: node .devkit/tools/build-rules.mjs app/firestore.app.rules
+// (writes firestore.rules, which is what deploys and the emulator use; CI fails when it is stale).
+// Roles come from custom claims (app-devkit rules kit): { g: { _: role }, x, v, m }; '_' is the single group.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // app-devkit rules/common.rules 1.5.0. Shared helpers, pasted in by tools/build-rules.mjs; do not edit the copy.
+    // Claims (a cache of the app's role docs, never the source of truth; all optional):
+    //   g  { <groupId>: <role> }  the user's role per group; a single-group app uses the key '_'
+    //   x  unix seconds           access ends then (absent = no end)
+    //   v  int                    claims version, bumped when the role docs change
+    //   m  string                 sign-in method; written for the record, never read by rules
+    // No email in authorisation. Lookups: only notRevoked() reads a document (1); the rest reads the token.
+
+    function isSignedIn() { return request.auth != null; }
+
+    // The user's role in group gid, or '' (no claim, other group, signed out).
+    function role(gid) { return isSignedIn() ? request.auth.token.get('g', {}).get(gid, '') : ''; }
+
+    function inGroup(gid) { return role(gid) != ''; }
+
+    function hasRole(gid, roles) { return inGroup(gid) && role(gid) in roles; }
+
+    // Not past the claim's access end. A malformed x fails closed.
+    function live() {
+      return isSignedIn() && (!('x' in request.auth.token) || request.time < timestamp.value(request.auth.token.x * 1000));
+    }
+
+    // One lookup: revoked/{uid} is written by the app's server when a member is removed, deleted when claims are re-issued.
+    // Keep revoked/ closed to clients (no match block for it).
+    function notRevoked() { return isSignedIn() && !exists(/databases/$(database)/documents/revoked/$(request.auth.uid)); }
+
+    // The usual gate: role in the list, access not ended, not revoked (the lookup runs only when the role fits).
+    function can(gid, roles) { return hasRole(gid, roles) && live() && notRevoked(); }
+
+    // Migration form while old clients have no claims: the claim when present, else the role from the app's own doc.
+    // Arguments are evaluated first, so a get() passed as docRole is read even when the claim decides. To skip that read,
+    // write the same form inline: role(gid) != '' ? role(gid) : get(...).data.role (see the multi-group example).
+    function roleOrDoc(gid, docRole) { return role(gid) != '' ? role(gid) : docRole; }
+
+    // Server stamps (writes): stamped() requires serverAt == request.time; stampOk() also accepts no serverAt (old clients).
+    function stamped() { return request.resource.data.get('serverAt', null) == request.time; }
+    function stampOk() { return !('serverAt' in request.resource.data) || request.resource.data.serverAt == request.time; }
+
+    // Partial updates from older clients that send no serverAt: it must stay exactly what the stored document has (absent
+    // stays absent). Use instead of stampOk() on update only while such clients exist. Trade-off: the edit keeps its old
+    // serverAt, so readers that fetch only what changed after a serverAt (server mode, incremental) do not see that edit
+    // until their next full read (a weekly one, for apps that run one). Drop it once every client stamps.
+    function stampKept() { return request.resource.data.get('serverAt', null) == resource.data.get('serverAt', null); }
+
+    // The field is a timestamp that is not after the server's time (a future-dated version would sort first for good).
+    // A client clock ahead of the server is refused too; write request.time with serverTimestamp where that matters.
+    function notFuture(field) {
+      return request.resource.data.get(field, null) is timestamp && request.resource.data.get(field, null) <= request.time;
+    }
+
+    // The field holds the signed-in user's uid (an author stamp nobody can write for someone else).
+    function authorIs(field) { return isSignedIn() && request.resource.data.get(field, null) == request.auth.uid; }
+
+    // The role docs: each person reads their own (the page watches its v), admins read all. Only the Worker writes them
+    // (/api/members/, worker/members.js): a removal there also revokes the account, which a page's delete could not.
+    match /members/{uid} {
+      allow read: if (isSignedIn() && request.auth.uid == uid) || can('_', ['admin']);
+      allow write: if false;
+    }
+
+    match /spaces/{g}/items/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member']) && stamped()
+        && request.resource.data.keys().hasOnly(['text', 'createdAt', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && request.resource.data.text is string && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.updatedAt is number
+        && (!('createdAt' in request.resource.data) || request.resource.data.createdAt is number)
+        && (resource == null || !('createdAt' in resource.data) || !('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if can(g, ['admin', 'member']);
+    }
+
+    // modules: rules{ written from app/rules/*.rules by node tools/modules.mjs; edit those, not this block
+    // }modules
+
+    // Each person's account options (@core/settings): one doc named by their uid, writable by them alone. The group can read the
+    // docs because a list listen cannot be proven to ask for only one (rules are not filters); keep secrets out of options.
+    // One field per option (src/options.js); null forgets a saved value.
+    match /spaces/{g}/settings/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member', 'viewer']) && request.auth.uid == id && stamped()
+        && request.resource.data.keys().hasOnly(['profile', 'itemCount', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && (!('profile' in request.resource.data) || request.resource.data.profile == null || request.resource.data.profile is string)
+        && (!('itemCount' in request.resource.data) || request.resource.data.itemCount == null || request.resource.data.itemCount is bool)
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
+    // A deleted item's last version, written in the delete's own transaction (cloud.js onCommit).
+    match /spaces/{g}/bin/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member']) && stamped()
+        && request.resource.data.keys().hasOnly(['id', 'kind', 'data', 'deletedAt', 'updatedAt', 'serverAt']);
+    }
+  }
+}

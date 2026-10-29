@@ -1,0 +1,12 @@
+{
+  "template": "flamingbeing/app-starter",
+  "version": "0.2.0",
+  "commit": "",
+  "app": {
+    "name": "starter-app",
+    "host": "app.example.com",
+    "kit": "homedesign",
+    "project": "demo-starter-app",
+    "title": "Starter app"
+  }
+}

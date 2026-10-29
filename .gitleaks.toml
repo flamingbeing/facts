@@ -1,0 +1,8 @@
+# gitleaks: the default rules, except the Firebase web config (a public client id, not a secret: the Firestore rules
+# decide who sees what; the key is restricted to this app's APIs and host), and the vendored Firebase hash list.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Firebase web config, vendored Firebase hashes"
+paths = ['''app/config\.js''', '''tools/firebase\.lock\.json''']

@@ -1,0 +1,33 @@
+# How far this app is behind the template it was made from (tools/update-from-starter.mjs --behind): a warning on the
+# run, never a failure, weekly and by hand. Also lists app-devkit pins older than the template's or the newest tag.
+# Bring the template in with `node tools/update-from-starter.mjs` (docs/new-app-checklist.md, "Staying current").
+# Skipped in the template repo itself. BEHIND: how many template commits behind before it warns.
+name: Template updates
+on:
+  schedule:
+    - cron: '17 1 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  BEHIND: '10'
+jobs:
+  behind:
+    if: github.repository != 'flamingbeing/app-starter'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: flamingbeing/app-devkit/setup-node@v1.9.2
+        with:
+          install: 'false'
+      - name: Template commits since this app's base
+        run: |
+          set +e
+          out="$(node tools/update-from-starter.mjs --behind "$BEHIND" --find-base 2>&1)"
+          code=$?
+          echo "$out" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$code" = 1 ]; then echo "::warning title=Template updates::$out (run node tools/update-from-starter.mjs)"; fi
+          if [ "$code" = 2 ]; then echo "::warning title=Template updates::could not check: $out"; fi
+          case "$out" in *"pins behind"*) echo "::notice title=app-devkit pins::$out" ;; esac
+          exit 0

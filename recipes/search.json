@@ -1,0 +1,49 @@
+{
+  "module": "search",
+  "about": "Full-text search over the list with operators (@core/search, MiniSearch loaded on first need); local here until a second kind of app wants it.",
+  "modules": {
+    "@core/search": {
+      "url": "./search/index.js",
+      "types": "./app/public/search/index.js",
+      "alias": "./app/public/search/index.js"
+    }
+  },
+  "vendor": [
+    "app/public/vendor/minisearch/7.2.0"
+  ],
+  "files": [
+    {
+      "from": "app/public/search"
+    },
+    {
+      "from": "app/src/screens/list-search.js"
+    },
+    {
+      "from": "app/test/search.unit.test.mjs"
+    },
+    {
+      "from": "app/test/search-lazy.unit.test.mjs"
+    },
+    {
+      "from": "e2e/search.spec.mjs"
+    },
+    {
+      "to": "app/src/modules.js",
+      "after": "// add: imports",
+      "line": "import { listSearch } from './screens/list-search.js';"
+    },
+    {
+      "to": "app/src/modules.js",
+      "after": "// add: slots",
+      "line": "  listFilter: listSearch,"
+    }
+  ],
+  "tsconfigInclude": [
+    "app/public/search/*.js",
+    "app/public/search/*.d.ts"
+  ],
+  "docs": [
+    "search: the box is app/src/screens/list-search.js (its operators has: and is: are samples; make them the app's own); the API is in app/public/search/index.js."
+  ],
+  "root": "recipes/search"
+}

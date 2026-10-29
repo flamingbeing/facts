@@ -1,0 +1,8 @@
+/* @core/ui gestures, the page-wide bits: no pull-to-refresh, the haptic switch. One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+/* no pull-to-refresh: a pull down at the top would reload the page (and lose a sheet's or a form's state) */
+html { overscroll-behavior-y: none; }
+
+/* the hidden switch the iPhone haptic toggles (gesture.js) */
+.ui-haptic { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; }

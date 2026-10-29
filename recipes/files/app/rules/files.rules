@@ -1,0 +1,21 @@
+// A photo or file on an item (@core/files): the record only; the bytes are in the Worker's R2 bucket.
+match /spaces/{g}/files/{id} {
+  allow read: if can(g, ['admin', 'member', 'viewer']);
+  allow create, update: if can(g, ['admin', 'member']) && stamped()
+    && request.resource.data.keys().hasOnly(['name', 'type', 'size', 'w', 'h', 'thumb', 'taken', 'state', 'item',
+      'updatedAt', 'serverAt', '_edits'])
+    && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+    && request.resource.data.name is string && request.resource.data.name.size() > 0
+    && request.resource.data.name.size() <= 255
+    && request.resource.data.type is string && request.resource.data.type.size() <= 129
+    && request.resource.data.size is int && request.resource.data.size >= 0
+    && request.resource.data.size <= 100000000
+    && (!('w' in request.resource.data) || request.resource.data.w is int)
+    && (!('h' in request.resource.data) || request.resource.data.h is int)
+    && (!('thumb' in request.resource.data) || request.resource.data.thumb is bool)
+    && (!('taken' in request.resource.data) || request.resource.data.taken is number)
+    && request.resource.data.state in ['local', 'stored']
+    && request.resource.data.item is string && request.resource.data.item.size() > 0
+    && request.resource.data.updatedAt is number;
+  allow delete: if can(g, ['admin', 'member']);
+}

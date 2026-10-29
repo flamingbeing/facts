@@ -1,0 +1,68 @@
+/* @core/ui v0: the kit parts' look, on @core/theme's custom properties (theme/theme.css loads first), corners from
+   the look's tokens (theme/looks.js). */
+/* the kit's own names start ui-; the bare ones (.chip .error .danger .small .row) still work for now, but go in 1.0 */
+:is(.ui-chip, .chip) { font-size: .85rem; padding: .2rem .6rem; border-radius: var(--control-r); border: 1px solid currentColor; }
+:is(.ui-chip, .chip)[data-state="attention"], .ui-error, .ui-danger, .error, .danger { color: var(--danger); }
+.ui-small, .small { font-size: .85rem; color: var(--muted); }
+.ui-inline, .row { display: flex; gap: var(--gap); flex-wrap: wrap; align-items: center; }
+
+dialog { max-width: 30rem; width: calc(100% - 2rem); background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--sheet-r); }
+dialog::backdrop { background: var(--backdrop); }
+
+/* conflict sheet */
+.ui-attention, .attention { width: 100%; margin: var(--gap) 0; }
+.ui-sides, .sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--pad); }
+:is(.ui-sides, .sides) h3 { font-size: 1rem; margin: 0 0 .25rem; }
+.ui-conflict-list { list-style: none; padding: 0; }
+.ui-conflict-list li { margin: 0 0 var(--pad); padding-bottom: var(--pad); border-bottom: 1px solid var(--line); }
+
+/* refused list */
+.ui-refused li { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: center; }
+
+/* an open modal (sheet, alert, confirm) or hold menu holds the page still: a wheel or finger on the backdrop doesn't
+   scroll the page behind it (and the menu's lifted preview stays on its row) */
+:root:has(dialog:modal), :root.ui-menu-open { overflow: hidden; }
+
+/* modal (alert / confirm) */
+dialog.modal p { margin: 0 0 var(--pad); }
+
+/* toasts */
+.toasts { position: fixed; inset: auto var(--pad) calc(var(--pad) + env(safe-area-inset-bottom, 0px)) var(--pad); display: grid; gap: var(--gap); justify-items: center; pointer-events: none; z-index: 10; }
+.toast { pointer-events: auto; display: flex; gap: var(--gap); align-items: center; max-width: 30rem; padding: var(--gap) var(--pad);
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--pill-r); }
+.toast button { min-width: var(--tap); padding: 0; border: 0; background: none; }
+.toast .toast-action { padding: 0 var(--gap); color: var(--link); font-weight: 600; }
+
+/* empty state */
+.empty-state { text-align: center; padding: calc(var(--pad) * 2) var(--pad); }
+.empty-state[hidden] { display: none; }
+.empty-title { font-family: var(--font-head); font-weight: var(--title-weight); margin: 0 0 var(--gap); }
+
+/* loading and error states */
+.load-state[hidden] { display: none; }
+.load-note { margin: 0 0 var(--gap); color: var(--muted); font-size: .85rem; }
+.load-row { height: var(--row); margin-bottom: var(--gap); border-radius: var(--control-r); background: linear-gradient(90deg, var(--line), var(--surface), var(--line)) 0 0 / 200% 100%;
+  animation: load-shimmer 1.4s linear infinite; }
+.load-error { margin: 0 0 var(--gap); color: var(--danger); }
+@keyframes load-shimmer { to { background-position: -200% 0; } }
+:root[data-motion="still"] .load-row { animation: none; }
+@media (prefers-reduced-motion: reduce) { .load-row { animation: none; } }
+
+/* about sheet */
+.about-licences { margin: 0 0 var(--pad); padding-left: 1.2rem; font-size: .85rem; color: var(--muted); }
+.about-sheet h3 { margin: var(--pad) 0 var(--gap); font-size: 1rem; }
+
+/* drag-reorder (drag-list.js) */
+.ui-grip { flex: none; min-width: var(--tap); min-height: var(--tap); display: grid; place-items: center; cursor: grab; touch-action: none; color: var(--muted); }
+li.dragging { position: relative; z-index: 2; box-shadow: var(--list-shadow); background: var(--surface); }
+
+/* hide mode (hide-mode.js) */
+.user-hidden { display: none !important; }
+.hide-cand { outline: 2px dashed var(--accent); outline-offset: 2px; cursor: pointer; }
+
+/* settings rows: the ⓘ detail and "Reset this page" (settings-screen.js) */
+.ui-setting:has(.ui-row-more) { flex-wrap: wrap; }
+.ui-info { flex: none; min-width: var(--tap); min-height: var(--tap); padding: 0; border: 0; background: none; color: var(--link); }
+.ui-row-more { flex-basis: 100%; margin: 0; }
+.ui-reset, .ui-undo { min-height: var(--tap); padding: 0 var(--gap); border: 0; background: none; color: var(--link); }

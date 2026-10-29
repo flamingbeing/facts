@@ -1,0 +1,18 @@
+/* @core/ui gestures, select mode's action bar. One part of
+   ui/gestures.css (which loads them all, in order); link it alone
+   for just this part, after theme.css and ui.css. */
+/* the bottom action bar that replaces the tab bar in select mode */
+.ui-action-bar { position: fixed; z-index: 6; left: var(--pad); right: var(--pad); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--gap));
+  display: flex; align-items: center; gap: var(--gap); max-width: 40rem; margin: 0 auto; padding: 4px 4px 4px var(--pad);
+  background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--pill-r); }
+.ui-action-bar[hidden] { display: none; }
+.ui-action-bar [data-select-count] { flex: 1; font-weight: 600; color: var(--text); }
+.ui-action-bar button { border: 0; background: none; color: var(--link); font-weight: 600; border-radius: calc(var(--pill-r) - 4px); }
+.ui-action-bar button:is(.ui-danger, .danger) { color: var(--danger); }
+/* nothing to act on yet: the same colour, faded, so it reads as off rather than as another colour */
+.ui-action-bar button:disabled { opacity: .4; cursor: default; }
+/* a look with the tab bar along the edge has the action bar there too, not a floating pill */
+[data-tabbar="edge"] .ui-action-bar { left: 0; right: 0; bottom: 0; max-width: none; border-width: var(--border) 0 0; border-radius: 0;
+  padding: 4px 4px calc(env(safe-area-inset-bottom, 0px) + 4px) var(--pad); }
+.glass .ui-action-bar { background: var(--glass-bg-thick); border-color: transparent; box-shadow: var(--glass-rim), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur-thick); backdrop-filter: var(--glass-blur-thick); }
