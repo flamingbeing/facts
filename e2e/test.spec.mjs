@@ -20,8 +20,11 @@ const openTest = async page => {
   await expect(page.locator('#test-count')).toContainText(/\d of \d/);
 };
 const deck = (/** @type {import('@playwright/test').Page} */ page) => page.evaluate(() => window.quiz.deck());
-// the card shown (the pager's middle slot moves as it turns, so find it by its line)
-const card = async (/** @type {import('@playwright/test').Page} */ page) => page.locator(`#test-deck .test-card[data-line="${await page.evaluate(() => window.quiz.deck()[window.quiz.index()])}"]`);
+// the card shown: the line the count ("2 of 3") points at (the pager's slots move as it turns, and its index is read once)
+const card = async (/** @type {import('@playwright/test').Page} */ page) => {
+  const n = Number((await page.locator('#test-count').textContent())?.match(/^(\d+) of/)?.[1]);
+  return page.locator(`#test-deck .test-card[data-line="${(await deck(page))[n - 1]}"]`);
+};
 /** @param {string} fact */
 const recallOf = async fact => {
   let doc;
