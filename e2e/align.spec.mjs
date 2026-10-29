@@ -373,6 +373,73 @@ test('the Log tab lists his answers, newest first; Changes only hides the ones t
   expect((await page.request.get('/api/queue')).status()).toBe(401);   // (a member's 403 is in the Worker test)
 });
 
+test('a Log row opens its details: the line, where, the answer and whether it is sent; Edit changes it in place, Undo withdraws it', { tag: '@webkit' }, async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await synced(page);
+  await openAlign(page);
+  await (await card(page)).getByRole('button', { name: '1 mg/kg' }).click();
+  await (await card(page)).getByRole('button', { name: 'Agree' }).click();
+  await expect(page.locator('#align-count')).toHaveText('2 of 4');
+  await (await card(page)).getByRole('button', { name: 'Show answer' }).click();
+  await (await card(page)).getByRole('button', { name: 'Bad question' }).click();
+  await verdictOf('drugs/sample-agent#ccc333', 'bad-question');
+  await openLog(page);
+  const row = page.locator('#log-answers .log-row').getByRole('button');
+  await expect(row).toHaveCount(1);
+  await row.focus();
+  await page.keyboard.press('Enter');   // a button: the keyboard opens it too
+  const sheet = page.locator('#log-detail');
+  await expect(sheet).toBeVisible();
+  await expect(page.locator('#log-detail-text')).toHaveText('Onset in 60 s');
+  await expect(page.locator('#log-detail-where')).toHaveText('Sample agent · Onset');
+  await expect(page.locator('#log-detail-said')).toContainText('Bad question');
+  await expect(page.locator('#log-detail-status')).toContainText('Kept with your answers');
+  await sheet.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.locator('#fix')).toBeVisible();
+  await expect(page.locator('#fix-text')).toHaveValue('Onset in 60 s');
+  await page.locator('#fix-text').fill('Onset in 30 s');
+  await page.locator('#fix').getByRole('button', { name: 'Save' }).click();
+  const edited = await verdictOf('drugs/sample-agent#ccc333', 'edit');   // the same doc, changed in place
+  expect(edited.text).toBe('Onset in 30 s');
+  expect(edited.old).toBeUndefined();
+  await expect(row).toContainText('Onset in 30 s');
+  await row.click();
+  await expect(page.locator('#log-detail-said')).toContainText('Edit');
+  await sheet.getByRole('button', { name: 'Undo' }).click();
+  await verdictOf('drugs/sample-agent#ccc333', 'seen');   // the flush skips it: withdrawn
+  await expect(row).toHaveCount(0);   // Changes only
+  await page.locator('#log-filter [data-filter="all"]').click();
+  await page.locator('#log-answers .log-row').first().getByRole('button').click();
+  await expect(page.locator('#log-detail-status')).toContainText('no change');
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+});
+
+test('the owner taps a sent item: no Undo; Edit queues a new edit of the line, with the line it replaces', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
+  await expect(page.locator('#tab-log')).toBeVisible();
+  await openLog(page);
+  const rows = page.locator('#log-queue .log-row');
+  await expect(rows).toHaveCount(4);
+  await rows.nth(2).getByRole('button').click();   // done, with a pull request
+  const sheet = page.locator('#log-detail');
+  await expect(sheet).toBeVisible();
+  await expect(page.locator('#log-detail-text')).toHaveText('Made-up fixed line');
+  await expect(page.locator('#log-detail-status')).toHaveText('Sent to the notes · Done');
+  await expect(sheet.getByRole('button', { name: 'Undo' })).toBeHidden();
+  await sheet.getByRole('button', { name: 'Edit' }).click();
+  await page.locator('#fix-text').fill('Made-up better line');
+  await page.locator('#fix').getByRole('button', { name: 'Save' }).click();
+  const v = await verdictOf('drugs/demo-drug#bbbb', 'edit');
+  expect(v.text).toBe('Made-up better line');
+  expect(v.old).toBe('Made-up fixed line');
+  await db.del(`spaces/_/verdicts/${v.by}~drugs~demo-drug~bbbb`);
+});
+
 test('the owner sees the queue: newest first, each queued, done (with the pull request link or a note) or held (why)', async ({ phone }) => {
   const page = await phone();
   await signIn(page, 'member');

@@ -186,6 +186,21 @@
 
   <div id="toasts"></div>
 
+  <dialog id="log-detail" aria-labelledby="log-detail-title">
+    <form method="dialog">
+      <h2 id="log-detail-title">Details</h2>
+      <p id="log-detail-text"></p>
+      <p id="log-detail-where" class="small"></p>
+      <p id="log-detail-said" class="small"></p>
+      <p id="log-detail-status" class="small"></p>
+      <div class="row">
+        <button value="edit" id="log-detail-edit">Edit</button>
+        <button value="undo" id="log-detail-undo">Undo</button>
+        <button value="close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="fix" aria-labelledby="fix-title">
     <form method="dialog">
       <h2 id="fix-title">What should it say?</h2>
