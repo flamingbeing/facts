@@ -74,6 +74,14 @@ test('verdicts: members write their own (by and the id are them, the id is the l
   assert.equal((await as('viewer').set('spaces/_/verdicts/u-viewer~drugs~demo~aaa111', v('u-viewer'), at)).ok, false, 'viewers only read');
   assert.equal((await as('viewer').get(path)).ok, true);
   assert.equal((await as('admin').delete(path)).ok, false, 'never deleted');
+  // the question he saw (q), and a flag card's answer (its fact is flag:<id>)
+  assert.equal((await as('member').set(path, v('u-member', { choice: 'bad-question', q: 'What is the demo dose?' }), at)).ok, true);
+  assert.equal((await as('member').set(path, v('u-member', { q: 'x'.repeat(1001) }), at)).ok, false, 'q at most 1000');
+  assert.equal((await as('admin').set('spaces/_/verdicts/u-admin~flag:F1', v('u-admin', { fact: 'flag:F1', choice: 'accept-fix' }), at)).ok, true);
+  assert.equal((await as('admin').set('spaces/_/verdicts/u-admin~flag:F1', v('u-admin', { fact: 'flag:F1', choice: 'keep' }), at)).ok, true);
+  // the flush marks (worker/flush.js) are the Worker's alone
+  assert.equal((await as('admin').get('flush/u-admin')).ok, false);
+  assert.equal((await as('admin').set('flush/u-admin', { upto: 1 })).ok, false);
 });
 
 test('bin entries: writers stamp them; viewers only read', async () => {
