@@ -1,7 +1,10 @@
 # Facts
 
-Made from [app-starter](https://github.com/flamingbeing/app-starter), a template for small offline-first web apps that
-are safe from day one. Replace this first paragraph with what the app is once it is filled.
+A phone app for checking a shared set of notes one line at a time. **Align** shows a card per line, as a quick
+question first. He then answers: agree, notes wrong (with the fix), I was wrong, other option also true, bad question,
+or edit. Each answer is saved as a verdict (NOTES, "Align"). Made from
+[app-starter](https://github.com/flamingbeing/app-starter), a template for small offline-first web apps that are safe
+from day one.
 <!-- static{
 > **A static app** ("Pick a starter"): no sign-in and no Firebase; the list stays on this device (IndexedDB,
 > `app/src/local.js`). The parts below on sign-in, roles, rules, the emulators and Firebase are the cloud app's:
@@ -141,7 +144,8 @@ app-sync's CI runs these tests that way against each candidate (its consumer tes
 
 ```text
 app/        the app (served at the root of its address): index.html (import map) and
-  src/      config.js, cloud.js (wiring), app.js (shell), screen-switch.js, screens/ (one file per screen), dom.js,
+  src/      config.js, cloud.js (wiring), app.js (shell), screen-switch.js, screens/ (one file per screen; align.js),
+            cards.js (lines, questions, the queue), data.js (the notes' area bundles, cached), dom.js,
             roles.js, boot.js, modules.js (the optional modules' slots), globals.d.ts (types for the check)
   public/   sw.js, app.css, manifest, icons, vendor/firebase/<version>/: served
             as if beside index.html (the Worker looks here on a miss), as Vite's public/ is
