@@ -30,13 +30,14 @@ test('glass by default; Solid in the switch takes it off, kept on reload and bef
   const root = page.locator('html');
   await expect(root).toHaveClass(/\bglass\b/);
   await collapsed(page);
-  expect(await style(page, '.ui-bar', 'backdrop-filter')).toContain('blur');
-  expect(await style(page, '.ui-bar', 'background-color')).toMatch(/(color\(srgb|oklab\(|rgba\().* \/ 0\.\d+\)/);   // see-through
+  // (the bar fades its colour over --d-quick once collapsed, so these wait for the end of it)
+  await expect.poll(() => style(page, '.ui-bar', 'backdrop-filter')).toContain('blur');
+  await expect.poll(() => style(page, '.ui-bar', 'background-color')).toMatch(/(color\(srgb|oklab\(|rgba\().* \/ 0\.\d+\)/);   // see-through
 
   await page.getByLabel('Bars and sheets').selectOption('solid');
   await expect(root).not.toHaveClass(/\bglass\b/);
   await collapsed(page);
-  expect(await style(page, '.ui-bar', 'backdrop-filter')).toBe('none');
+  await expect.poll(() => style(page, '.ui-bar', 'backdrop-filter')).toBe('none');
   await page.reload({ waitUntil: 'domcontentloaded' });
   await openSettings(page);
   await expect(root).not.toHaveClass(/\bglass\b/);

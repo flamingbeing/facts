@@ -42,6 +42,7 @@ test('forget this device: refused while unsent, then wipes the phone', async ({ 
   await synced(page);
   await page.context().setOffline(true);
   await seenOne(page);
+  await expect.poll(() => page.evaluate(() => window.starter.status)).not.toBe('synced');   // the save is queued (it is written once the card has settled)
   await openSettings(page);
   await page.click('#sign-out');
   await openAlign(page);
