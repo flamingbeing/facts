@@ -1,6 +1,6 @@
 # Live sign-in smoke test (app-devkit live-smoke): signs the app's test user in on the deployed site and runs
 # e2e-live/signin.live.spec.mjs (signed in, no data, no console errors). Runs by hand and after each successful Deploy.
-# Needs repo secrets STARTER_APP_TEST_EMAIL and STARTER_APP_TEST_PASSWORD (tools/fill.mjs renames them to <NAME>_TEST_*);
+# Needs repo secrets FACTS_TEST_EMAIL and FACTS_TEST_PASSWORD (tools/fill.mjs renames them to <NAME>_TEST_*);
 # without them the run says so and skips. Never runs in the template repo itself.
 name: Live smoke
 on:
@@ -16,10 +16,10 @@ jobs:
     if: github.repository != 'flamingbeing/app-starter' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     uses: flamingbeing/app-devkit/.github/workflows/live-smoke.yml@v1.11.0
     with:
-      site-url: https://app.example.com
+      site-url: https://facts.anawj.com
       spec-path: e2e-live
       firebase-config-file: app/src/config.js
       checkout-ref: ${{ github.event.workflow_run.head_sha }}
     secrets:
-      test-email: ${{ secrets.STARTER_APP_TEST_EMAIL }}
-      test-password: ${{ secrets.STARTER_APP_TEST_PASSWORD }}
+      test-email: ${{ secrets.FACTS_TEST_EMAIL }}
+      test-password: ${{ secrets.FACTS_TEST_PASSWORD }}

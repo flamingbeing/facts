@@ -79,7 +79,7 @@ jobs:
           devkit-dir: .devkit
       - name: Rules in the emulator
         working-directory: app
-        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-starter-app "node --test test/rules.test.mjs"
+        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-facts "node --test test/rules.test.mjs"
   # }cloud
 
   e2e:
@@ -190,7 +190,7 @@ jobs:
       - name: Rules on the full app
         if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
         working-directory: ${{ runner.temp }}/app/app
-        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-starter-app "node --test test/rules.test.mjs"
+        run: npx -y firebase-tools@15.33.0 emulators:exec --only firestore --project demo-facts "node --test test/rules.test.mjs"
       - name: Browser tests on the full app
         if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
         working-directory: ${{ runner.temp }}/app
@@ -253,7 +253,7 @@ jobs:
           node tools/fill.mjs "${ARGS[@]}"
           node tools/fill.mjs "${ARGS[@]}" --check
           grep -qF "$FAKE_KEY" app/src/config.js
-          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs --exclude=claims.js --exclude=custom-token.js -e 'starter-app' -e 'app\.example\.com' .
+          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs --exclude=claims.js --exclude=custom-token.js -e 'facts' -e 'app\.example\.com' .
       - name: Checks on the filled app
         if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
         working-directory: ${{ runner.temp }}/new-app
@@ -317,7 +317,7 @@ jobs:
           node tools/fill.mjs "${ARGS[@]}" --static
           node tools/fill.mjs "${ARGS[@]}" --check
           jq -e '.flavour == "static" and .app.project == ""' .starter.json
-          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs -e 'starter-app' -e 'app\.example\.com' .
+          ! grep -rIl --exclude-dir=node_modules --exclude-dir=.devkit --exclude='*.log' --exclude=fill.mjs --exclude=fill.test.mjs --exclude=update-from-starter.test.mjs -e 'facts' -e 'app\.example\.com' .
           ! grep -rIlE --exclude-dir=node_modules -e '^\s*(//|#|<!--) *(cloud\{|\}cloud)' app e2e worker tools .github
       - name: Checks on the static app
         if: steps.changes.outputs.app == 'true' && (matrix.mode == 'plain')
