@@ -41,12 +41,18 @@ export function prompt(text, topics) {
 export function filing(reply, text, known) {
   let o;
   try { o = JSON.parse(String(reply).replace(/^[^{]*/, '').replace(/[^}]*$/, '')); } catch { return null; }
-  const topic = String(o?.topic || '').trim().toLowerCase();
-  const [area, slug] = topic.split('/');
-  if (!AREAS.includes(area) || !SLUG.test(slug || '') || topic.split('/').length !== 2) return null;
-  const section = String(o?.section || '').trim().replace(/^#+\s*/, '').slice(0, 60);
+  // tolerant: a topic id in any case or with spaces/underscores is tidied; an unknown area files under "other"; a missing
+  // section or line falls back to "Notes" and his own words, so a fixable reply is never thrown away
+  const kebab = (/** @type {string} */ x) => x.trim().toLowerCase().replace(/[\s_]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+  const [a, ...rest] = String(o?.topic || '').split('/');
+  const slug = kebab(rest.join('-'));
+  if (!SLUG.test(slug)) return null;
+  const area = AREAS.includes(kebab(a)) ? kebab(a) : 'other';
+  const topic = `${area}/${slug}`;
+  const section = String(o?.section || '').trim().replace(/^#+\s*/, '').slice(0, 60) || 'Notes';
   let line = String(o?.line || '').trim().replace(/^[-•*]\s*/, '');
-  if (!section || !line || line.length > 500) return null;
+  if (!line || line.length > 500) line = text.trim().replace(/^[-•*]\s*/, '');
+  if (line.length > 500) return null;
   const want = numbers(text).join('|'), got = numbers(line).join('|');
   if (want !== got) line = text.trim().replace(/^[-•*]\s*/, '');
   const isNew = !known.has(topic);
@@ -93,7 +99,9 @@ export async function handleFile(request, { verify, ask, local = false }) {
   }
   if (!ask) return json({ error: 'Filing isn’t set up yet: the Worker needs its ANTHROPIC_API_KEY secret.' }, 503);
   try {
-    const out = filing(await ask(prompt(text, topics)), text, new Set(topics.map((/** @type {any[]} */ t) => t[0])));
+    const reply = await ask(prompt(text, topics));
+    const out = filing(reply, text, new Set(topics.map((/** @type {any[]} */ t) => t[0])));
+    if (!out) console.error('file: reply not usable', String(reply).slice(0, 300));
     return out ? json(out) : json({ error: 'Couldn’t place that one. Try wording it differently.' }, 502);
   } catch (e) {
     console.error('file failed', /** @type {any} */ (e)?.message);

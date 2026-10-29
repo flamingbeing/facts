@@ -38,7 +38,8 @@ test('file: a new topic carries its title; a changed number falls back to his ow
   const r = await (await ask('own', { text, topics: TOPICS }, { ask: async () => reply })).json();
   assert.deepEqual(r, { topic: 'drugs/rocuronium', section: 'Dosage', line: text, isNew: true, title: 'Rocuronium' });
   assert.equal((await ask('own', { text, topics: TOPICS }, { ask: async () => 'sorry' })).status, 502);
-  assert.equal((await ask('own', { text, topics: TOPICS }, { ask: async () => '{"topic":"nope/x","section":"A","line":"b"}' })).status, 502);
+  assert.equal((await ask('own', { text, topics: TOPICS }, { ask: async () => '{"topic":"","section":"A","line":"b"}' })).status, 502);
+  assert.equal((await (await ask('own', { text, topics: TOPICS }, { ask: async () => '{"topic":"nope/x","section":"A","line":"b"}' })).json()).topic, 'other/x');
   assert.equal((await ask('own', { text, topics: TOPICS }, { ask: async () => { throw new Error('down'); } })).status, 502);
 });
 
@@ -51,5 +52,8 @@ test('file: helpers', () => {
   assert.deepEqual(numbers('1,000 ml and 2.5 mg, 3'), ['1,000', '2.5', '3']);
   assert.equal(MODEL, 'claude-sonnet-5-5');
   assert.match(prompt('x', []), /\(none yet\)/);
-  assert.equal(filing('{"topic":"a/b","section":"s","line":"l"}', 'l', new Set()), null);
+  assert.equal(filing('not json', 'l', new Set()), null);
+  assert.equal(filing('{"topic":"a/b","section":"s","line":"l"}', 'l', new Set()).topic, 'other/b');
+  const t = filing('Here: {"topic":"Drugs/Propofol Dose","line":""}', 'Dose 5 mg', new Set());
+  assert.deepEqual([t.topic, t.section, t.line], ['drugs/propofol-dose', 'Notes', 'Dose 5 mg']);
 });
