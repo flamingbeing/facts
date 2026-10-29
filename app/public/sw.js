@@ -42,6 +42,7 @@ const SHELL = [
   'src/screens/test.js',
   'src/shell.js',
   'src/state.js',
+  'src/vpager.js',
   'vendor/firebase/12.19.0/firebase-app.js',
   'vendor/firebase/12.19.0/firebase-auth.js',
   'vendor/firebase/12.19.0/firebase-firestore.js',

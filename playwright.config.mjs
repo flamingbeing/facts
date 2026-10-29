@@ -1,14 +1,14 @@
 // Browser tests: npx playwright test (README, "Tests"). The emulators (demo- project, made-up accounts; never a live
 // project) and the e2e server (the real Worker in Node) start here unless already running. The kit's base config comes
 // from app-devkit (.devkit/, put there by setup-browser in CI; copy it once locally).
-import { baseConfig } from './.devkit/playwright/base.mjs';
+import { baseConfig, phone } from './.devkit/playwright/base.mjs';
 import { emulatorServer } from './.devkit/playwright/helpers.mjs';
 
 export const PORT = 4173;
 // the emulators' firebase-tools (also package.json "rules" and checks.yml): 15.33.0 has Firestore emulator v1.22, the
 // first not to lose a change written while a Listen stream restarts after a token refresh (list.spec, "during a token refresh")
 const FIREBASE_TOOLS = '15.33.0';
-export default baseConfig({
+const config = baseConfig({
   testDir: 'e2e',
   testMatch: '*.spec.mjs',
   projects: ['phone'],
@@ -21,3 +21,6 @@ export default baseConfig({
     { command: `node e2e/serve.mjs ${PORT}`, url: `http://localhost:${PORT}/app/`, reuseExistingServer: !process.env.CI, timeout: 30_000 },
   ],
 });
+// PW_WEBKIT=1: the tests tagged @webkit on WebKit too (Safari's engine; checks.yml installs it for that step only)
+if (process.env.PW_WEBKIT) config.projects.push({ name: 'webkit', grep: /@webkit/, use: { ...phone.use, browserName: 'webkit', launchOptions: {} } });
+export default config;

@@ -32,7 +32,7 @@ const recallOf = async fact => {
   return doc;
 };
 
-test('an MCQ is graded from the pick: right is saved as a state due in days, and the topic score moves', async ({ phone }) => {
+test('an MCQ is graded from the pick: right is saved as a state due in days, and the topic score moves', { tag: '@webkit' }, async ({ phone }) => {
   const page = await phone();
   await signIn(page, 'member');
   await synced(page);
@@ -49,6 +49,8 @@ test('an MCQ is graded from the pick: right is saved as a state due in days, and
   expect([d.ok, d.reps, d.lapses]).toEqual([true, 1, 0]);
   expect(d.due - d.last).toBeGreaterThanOrEqual(864e5);
   await expect(c.getByRole('button', { name: 'Next' })).toBeVisible();
+  await page.waitForTimeout(800);   // the card grew (the answer shows): the deck stays on it (vpager.js)
+  await expect(page.locator('#test-count')).toHaveText('1 of 3');
   await c.getByRole('button', { name: 'Next' }).click();
   await expect(page.locator('#test-count')).toHaveText('2 of 3');
 });

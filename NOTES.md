@@ -105,10 +105,14 @@ text changed). Nothing is saved, so there is no format to migrate.
   a fresher copy waits for the next visit.
 - Verdicts: `spaces/_/verdicts/{uid}~{line with '/' and '#' as '~'}`, one doc per person and line, latest answer wins.
   Text is always written ('' for none). The rules check that the id is the writer's and the line's.
-- A card swiped past with no answer is saved as `seen`, after the glide lands. This is skipped when the line already
+- Cards go up and down (`app/src/vpager.js`, Align and Test): swipe up for the next card, down for the one before;
+  sideways swipes stay the tab pager's. Scroll-snap is on only while a finger is on the deck: left on, the browser
+  re-snapped to the next card when a tapped answer made the card taller. Buttons and arrow keys jump and slide the card
+  in (a smooth scroll started in a tap is dropped by some browsers). Tests tagged `@webkit` also run on WebKit in Checks.
+- A card swiped past with no answer is saved as `seen`, after the scroll lands. This is skipped when the line already
   has a real answer, so his fix text is never overwritten.
 - Flags (questions the notes mark as doubtful) need an owner-only route on the Worker: next step.
-- Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. The jank gate in the same file is the card swipe at 4x
+- Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. The jank gate in the same file is the card swipe up and flick down at 4x
   CPU slowdown, with app-ui's frame budget.
 
 ## Add tab

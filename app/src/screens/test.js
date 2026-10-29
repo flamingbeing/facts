@@ -5,13 +5,14 @@
 // with an open flag (the owner's /api/flags) and lines he sent back are left out. "This fact is wrong" (the owner's
 // button) saves a verdict on 'wrong:<line>' with choice 'flag', which the queue (worker/flush.js) takes to the notes'
 // processor, and takes the card out of the deck at once. A wrong answer only reschedules; it never edits the notes.
-import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/ui';
+import { toaster, emptyState, loadState, afterGesture } from '@core/ui';
 import { AREA_NAMES, chipOrder, cardsFrom, questionFor, flaggedIds, plain, WRONG } from '../cards.js';
 import { grade, testDeck, topicScores } from '../schedule.js';
 import { loadData } from '../data.js';
 import { REFUSED } from '../state.js';
 import { el, askCard } from '../ask.js';
 import { $, input } from '../dom.js';
+import { vPager } from '../vpager.js';
 
 /** @typedef {import('../cards.js').Fact} Line */
 /** @typedef {import('../schedule.js').Recall} Recall */
@@ -138,7 +139,7 @@ export function testScreen(app) {
     stage.hidden = !deck.length;
     renderScores();
     if (!deck.length) { $('test-count').textContent = ''; return; }
-    pager = cardPager(stage, { card, onShow: shown, fill: true });
+    pager = vPager(stage, { card, onShow: shown, fill: true });
     Object.assign(window, { quiz: { deck: () => deck.map(l => l.id), index: () => pager?.index() ?? -1, go: (/** @type {1 | -1} */ s) => pager?.go(s) } });
   };
 
