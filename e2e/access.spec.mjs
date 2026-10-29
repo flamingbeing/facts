@@ -2,7 +2,7 @@
 import AxeBuilder from './axe.mjs';
 import { test, expect, signIn, db, APP } from './fixtures.mjs';
 
-test('signed out: the sign-in screen is on Align, accessible', async ({ phone }) => {
+test('signed out: the sign-in screen is on Align, accessible', { tag: '@smoke' }, async ({ phone }) => {
   const page = await phone();
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#align-page')).toBeVisible();

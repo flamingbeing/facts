@@ -1,0 +1,46 @@
+# Full checks: everything slower than the quick Checks (checks.yml). Here: the whole browser suite on the Vite build.
+# An app adds its other slow runs here (other browsers, a jank gate, heavy axe
+# runs). Runs nightly from soak.yml, by hand (Actions, "Full checks", Run workflow; `ref` = a PR number, branch, tag
+# or SHA, empty = main), and on PRs when the repo variable FULL_CHECKS_ON_PRS is true. Never after merges or releases.
+name: Full checks
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: PR number, branch, tag or SHA (empty = main)
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  ref:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+    steps:
+      - id: ref
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          case "$REF" in
+            '') echo "ref=" >> "$GITHUB_OUTPUT" ;;
+            *[!0-9]*) echo "ref=$REF" >> "$GITHUB_OUTPUT" ;;
+            *) echo "ref=refs/pull/$REF/head" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  vite:
+    # the whole browser suite on the Vite build (dist/)
+    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
+    with:
+      name: vite-full
+      shards: 3
+      ref: ${{ inputs.ref }}
+      build-command: npm run vite
+      app-dir: dist
+      emulators: firestore,auth

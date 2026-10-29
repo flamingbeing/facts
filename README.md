@@ -128,7 +128,7 @@ npm ci
 node --test 'worker/test/*.test.mjs' 'app/test/*.unit.test.mjs' 'tools/test/*.test.mjs'   # no network
 npm run typecheck # app/src under strict, against the pinned app-sync's .d.ts (tsconfig.json)
 npm run rules     # rules in the Firestore emulator (needs Java and .devkit/)
-npm run e2e       # browser tests (emulators and the e2e server start by themselves)
+npm run e2e       # browser tests, on GitHub (Checks = quick: Chromium phone shards + Vite @smoke; Full checks nightly or on request); locally one spec at most (emulators and the e2e server start by themselves)
 npm run vite      # Vite build into dist/ (core, Firebase and register.js stay external), its SHELL and stamp
 APP_DIR=dist npm run e2e   # the same browser tests on that build
 node tools/modules.mjs --check && node tools/vendor-firebase.mjs --check   # modules.json's places and Firebase (no network)
