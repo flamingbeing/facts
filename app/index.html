@@ -14,9 +14,9 @@
     "@core/auth": "https://core.anawj.com/sync/1.5.5/auth.js",
     "@core/sync": "https://core.anawj.com/sync/1.5.5/sync.js",
     "@core/update": "https://core.anawj.com/sync/1.5.5/update.js",
-    "@core/ui": "https://core.anawj.com/ui/1.0.0-rc.42/ui/index.js",
-    "@core/theme": "https://core.anawj.com/ui/1.0.0-rc.42/theme/index.js",
-    "@core/settings": "https://core.anawj.com/ui/1.0.0-rc.42/settings/index.js",
+    "@core/ui": "https://core.anawj.com/ui/1.0.0-rc.51/ui/index.js",
+    "@core/theme": "https://core.anawj.com/ui/1.0.0-rc.51/theme/index.js",
+    "@core/settings": "https://core.anawj.com/ui/1.0.0-rc.51/settings/index.js",
     "app-update/register.js": "https://core.anawj.com/update/0.2.0/register.js",
     "firebase/app": "./vendor/firebase/12.19.0/firebase-app.js",
     "firebase/auth": "./vendor/firebase/12.19.0/firebase-auth.js",
@@ -24,14 +24,14 @@
   }
 }
   </script>
-  <script src="https://core.anawj.com/ui/1.0.0-rc.42/theme/early.js"></script>
+  <script src="https://core.anawj.com/ui/1.0.0-rc.51/theme/early.js"></script>
   <link rel="modulepreload" href="https://core.anawj.com/sync/1.5.5/app.js" data-module>
   <link rel="modulepreload" href="https://core.anawj.com/sync/1.5.5/auth.js" data-module>
   <link rel="modulepreload" href="https://core.anawj.com/sync/1.5.5/sync.js" data-module>
   <link rel="modulepreload" href="https://core.anawj.com/sync/1.5.5/update.js" data-module>
-  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.42/ui/index.js" data-module>
-  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.42/theme/index.js" data-module>
-  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.42/settings/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/index.js" data-module>
+  <link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.51/settings/index.js" data-module>
   <link rel="modulepreload" href="https://core.anawj.com/update/0.2.0/register.js" data-module>
   <link rel="modulepreload" href="./vendor/firebase/12.19.0/firebase-app.js" data-module>
   <link rel="modulepreload" href="./vendor/firebase/12.19.0/firebase-auth.js" data-module>
@@ -41,11 +41,11 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="https://design.anawj.com/v1/tokens.css">
-  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.42/theme/theme.css">
-  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.42/ui/ui.css">
-  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.42/theme/glass.css">
-  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.42/ui/gestures.css">
-  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.42/ui/shell/shell.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/theme.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/ui.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/glass.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/gestures.css">
+  <link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/shell/shell.css">
   <link rel="stylesheet" href="app.css">
   <script type="module" src="src/app.js"></script>
 </head>
@@ -57,7 +57,11 @@
     <header class="ui-bar">
       <span class="ui-bar-side" data-bar-lead><button type="button" class="ui-bar-menu" aria-label="Menu" aria-controls="side">☰</button></span>
       <h2 class="ui-bar-title" aria-hidden="true">Facts</h2>
-      <span class="ui-bar-side ui-bar-end"></span>
+      <span class="ui-bar-side ui-bar-end">
+      <!-- cloud{ the sync button: a static app's answers are never unsent -->
+      <button type="button" id="sync-btn" class="ui-sync-btn"></button>
+      <!-- }cloud -->
+    </span>
     </header>
     <!-- (the kit's shell looks for a .ui-list to watch; this app has no list, so it gets an empty one that never shows) -->
     <ul class="ui-list" hidden></ul>
@@ -95,9 +99,6 @@
           <input id="align-find" type="text" enterkeyhint="go" placeholder="Find topics and lines" aria-label="Find cards" autocomplete="off">
           <div class="align-countrow">
             <p id="align-count" class="small" role="status"></p>
-            <!-- cloud{ the sync chip: a static app's answers are never unsent -->
-            <span id="sync-chip"></span>
-            <!-- }cloud -->
           </div>
           <div id="align-state"></div>
           <div id="align-deck" aria-label="Cards"></div>

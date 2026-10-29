@@ -1,9 +1,6 @@
 /* The screens' layout; colours, type and the kit parts' look come from theme/theme.css, ui/ui.css and, for the
    shell, ui/gestures.css and ui/shell/shell.css. */
 .status-line { margin: 0 var(--pad) var(--gap); }
-/* the sync chip shares the count line, so Align's deck keeps its height */
-.align-countrow { position: relative; }
-.align-countrow #sync-chip { position: absolute; top: 0; right: var(--pad); }
 input { padding: .5rem; flex: 1; min-width: 10rem; }
 
 /* toasts sit above the tab bar on a phone; the room under each screen for the tab bar is the kit's (tabBarRoom), so
