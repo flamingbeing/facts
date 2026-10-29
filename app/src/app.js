@@ -1,7 +1,7 @@
 // The page's wiring: the shell and Settings page (shell.js), the kit's sync chip, the account block, and the screen
 // switch. Align (screens/align.js) is the first tab and the screen of the "ready" phase; the sign-in, no-access and
 // not-set-up screens show in its place (they sit in its page, index.html).
-import { syncChip, plural, loadState, conflictSheet, refusedList } from '@core/ui';
+import { syncButton, plural, loadState, conflictSheet, refusedList } from '@core/ui';
 import { start, usingEmulator, emulatorSignIn, lastSignedIn } from './cloud.js';
 import { $ } from './dom.js';
 import { VERDICTS } from './cards.js';
@@ -42,7 +42,7 @@ else {
     const state = st.state === 'saving' ? 'pending' : st.state;
     fn(state === 'synced' && st.unsent > 0 ? { state: 'pending', count: st.unsent } : { state, count: st.count });
   });
-  syncChip($('sync-chip'), { sync: /** @type {any} */ ({ status$: chipStatus$ }) });   // (the chip reads only status$)
+  syncButton($('sync-btn'), { sync: /** @type {any} */ ({ status$: chipStatus$, nudge: (/** @type {any} */ a) => app.sync.nudge(a), flush: () => app.sync.flush() }) });   // (a tap: nudge('wake') then flush(); the state comes from the whole app)
   chipStatus$(st => { window.starter.status = st.state; });
   const align = alignScreen(app);
   const test = testScreen(/** @type {any} */ (app));   // the quiz tab: shown once signed in with access (onState)
