@@ -7,7 +7,7 @@ export const input = id => /** @type {HTMLInputElement} */ ($(id));
 /** @param {string} id */
 export const dialog = id => /** @type {HTMLDialogElement} */ ($(id));
 
-/** @typedef {import('./items.js').State} State */
+/** @typedef {import('./state.js').State} State */
 /** @typedef {{ show: (s: State) => void, hide: () => void }} Screen */
 
 /**

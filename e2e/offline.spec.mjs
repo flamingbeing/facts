@@ -1,6 +1,6 @@
 // The service worker installs the whole app (the generated SHELL in public/sw.js: the page, its files, vendored
 // Firebase and the pinned core files), so a phone that has opened the app once starts it with no network at all.
-import { test, expect, setOffline, uniq, signIn, add, synced, serverHas } from './fixtures.mjs';
+import { test, expect, setOffline, signIn, seenOne, verdictHas, synced } from './fixtures.mjs';
 
 // every file of sw.js's SHELL is in a cache (the worker takes charge, and WebKit's and Firefox's even report a controller,
 // before the cache is full: going offline then leaves the page without the files that were still on their way)
@@ -14,28 +14,26 @@ const shellCached = page => page.evaluate(async () => {
 });
 const shellFilled = page => expect.poll(() => shellCached(page), { message: 'every SHELL file cached', timeout: 30_000 }).toEqual([]);
 
-test('with no network, the app starts from the service worker and shows the saved list', async ({ phone }) => {
+test('with no network, the app starts from the service worker and shows Align', async ({ phone }) => {
   const page = await phone();
-  await signIn(page, 'member', { path: '/app/?emulator&sw' });
+  const { uid } = await signIn(page, 'member', { path: '/app/?emulator&sw' });
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 30_000 }).toBe(true);
   await shellFilled(page);
-  const t = uniq('kept');
-  await add(page, t);
+  await seenOne(page);
   await synced(page);
   await setOffline(page.context(), true);
   await page.goto(page.url(), { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#list-view')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('#items')).toContainText(t);
+  await expect(page.locator('#align-view')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('#align-count')).toBeVisible();
   await setOffline(page.context(), false);
 });
 
-test('with no network and an expired sign-in token, the app still starts and shows the saved list', async ({ phone, browserName }) => {
+test('with no network and an expired sign-in token, the app still starts and shows Align', async ({ phone, browserName }) => {
   const page = await phone();
-  await signIn(page, 'member', { path: '/app/?emulator&sw' });
+  const { uid } = await signIn(page, 'member', { path: '/app/?emulator&sw' });
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 30_000 }).toBe(true);
   await shellFilled(page);
-  const t = uniq('kept');
-  await add(page, t);
+  await seenOne(page);
   await synced(page);
   const errors = [];
   // (WebKit reports a Firestore channel request that the route aborted as an uncaught error whose message is just its URL)
@@ -45,12 +43,12 @@ test('with no network and an expired sign-in token, the app still starts and sho
   await page.clock.install({ time: Date.now() + 2 * 3600_000 });
   await page.clock.resume();
   await page.goto(page.url(), { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#list-view')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('#items')).toContainText(t);
+  await expect(page.locator('#align-view')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('#align-count')).toBeVisible();
   expect(errors, 'uncaught errors').toEqual([]);
   // back online, it gets a new token and saves reach the server again
   await setOffline(page.context(), false);
-  const t2 = uniq('after');
-  await add(page, t2);
-  await serverHas(t2);
+  await expect.poll(() => page.evaluate(() => window.starter.ready)).toBe(true);
+  const fact = await seenOne(page);
+  await verdictHas(uid, fact);
 });

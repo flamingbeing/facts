@@ -185,7 +185,7 @@ export async function signIn(page, role = 'member', { path = APP } = {}) {
   const uid = await page.locator('#uid').textContent();
   if (role) {
     await db.put(`members/${uid}`, { role, v: 1 });
-    await expect(page.locator('#list-view')).toBeVisible();
+    await expect(page.locator('#align-view')).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.starter.ready)).toBe(true);
   }
   return { uid, email };
@@ -196,7 +196,7 @@ export async function signInAgain(page, email) {
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#signed-out')).toBeVisible();
   await page.evaluate(e => window.starter.signInAs(e), email);
-  await expect(page.locator('#list-view')).toBeVisible();
+  await expect(page.locator('#align-view')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.starter.ready)).toBe(true);
 }
 
@@ -205,40 +205,25 @@ export async function signInAgain(page, email) {
 // A static app has no sign-in: the step a cloud app's tests sign in with only opens the list. -> {}
 export async function signIn(page, role = 'member', { path = APP } = {}) {
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#list-view')).toBeVisible();
+  await expect(page.locator('#align-view')).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.starter.ready)).toBe(true);
   return {};
 }
 }static */
 
-export async function add(page, text) {
-  await page.fill('#new-text', text);
-  await page.click('#add button[type=submit]');
-  await expect(page.locator('#items')).toContainText(text);
-}
 // Open a dialog from its button and wait for the dialog. The list redraws its buttons whenever a snapshot lands (the files
 // snapshot follows the first list one); a pointer click whose button is swapped out between press and release is dropped
 // (Firefox). The click event is sent in one step instead, to the button as it is now: nothing in between to be swapped.
-// The Settings page (a tab on a phone, a side-bar link from 600 px) and back to the list
+// The Settings page and Align (tabs on a phone, side-bar links from 600 px)
 const tabLink = id => `.ui-tab[data-tab-page="#${id}"]:visible, .ui-side-link[data-tab-page="#${id}"]:visible`;
 // (the tab bar folds its other tabs away once the page scrolls down: back at the top they show)
 const toTop = page => page.evaluate(() => { scrollTo(0, 0); document.querySelector('.ui-tabbar')?.classList.remove('is-minimised'); });
 export const openSettings = async page => { await toTop(page); await page.locator(tabLink('settings-page')).first().click(); await expect(page.locator('#settings-host')).toBeVisible(); };
-export const openItems = async page => { await toTop(page); await page.locator(tabLink('items-page')).first().click(); await expect(page.locator('#items-page')).toBeVisible(); };
+export const openAlign = async page => { await toTop(page); await page.locator(tabLink('align-page')).first().click(); await expect(page.locator('#align-page')).toBeVisible(); };
 export const clickOpens = async (button, dialog) => { await button.dispatchEvent('click'); await expect(dialog).toBeVisible(); };
-export const synced = page => expect.poll(() => page.evaluate(() => window.starter.status), { timeout: 15_000 }).toBe('synced');
+// An Align card swiped on: its 'seen' verdict is the app's one small save. -> the line it was saved for
+export const seenOne = page => page.evaluate(() => { const line = window.align.deck()[window.align.index()]; window.align.go(1); return line; });
 // cloud{
-export const serverHas = text => expect.poll(async () => (await db.list('spaces/_/items')).some(d => d.text === text), { timeout: 15_000 }).toBe(true);
-// The id of the shared item with this text (db.list leaves document ids out).
-export async function itemIdOf(text) {
-  const host = process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080';
-  // (every page: the shared list grows over a long --repeat-each soak, past one page)
-  for (let token = ''; ;) {
-    const r = await fetch(`http://${host}/v1/projects/demo-facts/databases/(default)/documents/spaces/_/items?pageSize=300${token ? `&pageToken=${encodeURIComponent(token)}` : ''}`, { headers: { Authorization: 'Bearer owner' } });
-    const j = await r.json();
-    const d = (j.documents || []).find(x => x.fields?.text?.stringValue === text);
-    if (d) return d.name.split('/').pop();
-    if (!(token = j.nextPageToken || '')) return undefined;
-  }
-}
+export const verdictHas = (uid, fact) => expect.poll(async () => (await db.list('spaces/_/verdicts')).some(d => d.by === uid && d.fact === fact), { timeout: 15_000 }).toBe(true);
 // }cloud
+export const synced = page => expect.poll(() => page.evaluate(() => window.starter.status), { timeout: 15_000 }).toBe('synced');

@@ -1,15 +1,15 @@
-// The screen switch: one screen per phase of the app (items.js State); showing one hides the others. A change of
+// The screen switch: one screen per phase of the app (state.js State); showing one hides the others. A change of
 // phase is drawn as a view transition (@core/theme viewSwitch); an update within the same screen is not.
 import { viewSwitch } from '@core/theme';
 
 /**
- * @param {Record<import('./items.js').Phase, import('./dom.js').Screen>} screens
- * @returns {(s: import('./items.js').State) => void} show the screen for s.phase
+ * @param {Record<import('./state.js').Phase, import('./dom.js').Screen>} screens
+ * @returns {(s: import('./state.js').State) => void} show the screen for s.phase
  */
 export function screenSwitch(screens) {
   /** @type {string | null} */
   let shown = null;
-  /** @type {import('./items.js').State} */
+  /** @type {import('./state.js').State} */
   let latest;
   // (draws the latest state: a transition runs its change a moment later, after any state that came in meanwhile)
   const draw = () => {

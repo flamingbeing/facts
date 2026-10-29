@@ -184,7 +184,7 @@ test('the owner gets the open flags first (high, clash, medium); an answer goes 
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#signed-out')).toBeVisible();
   await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);   // the owner: admin by default, no role doc
-  await expect(page.locator('#list-view')).toBeVisible();
+  await expect(page.locator('#align-count')).toBeVisible();
   await openAlign(page);
   await expect.poll(() => page.evaluate(() => window.align.deck().slice(0, 4))).toEqual(['flag:F9002', 'flag:F9003', 'flag:F9001', 'drugs/demo-drug#aaa111']);
   const c = await card(page);

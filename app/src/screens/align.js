@@ -11,7 +11,7 @@
 import { cardPager, toaster, emptyState, loadState, afterGesture } from '@core/ui';
 import { AREA_NAMES, cardsFrom, queue, flagDeck, questionFor, plain, seenFrom } from '../cards.js';
 import { loadData } from '../data.js';
-import { REFUSED } from '../items.js';
+import { REFUSED } from '../state.js';
 import { $, input, dialog } from '../dom.js';
 
 /** @typedef {import('../cards.js').Fact} Line */
@@ -44,7 +44,7 @@ const ago = at => {
 /**
  * @param {{ verdict: (fact: string, choice: string, text: string, base: Verdict | null, q?: string) => Promise<string>,
  *   flush: () => Promise<string>, flags: () => Promise<import('../cards.js').Flag[]> }} app
- * @returns {{ show: (s: import('../items.js').State) => void, hide: () => void, verdicts: (list: Verdict[]) => void }}
+ * @returns {{ show: (s: import('../state.js').State) => void, hide: () => void, verdicts: (list: Verdict[]) => void }}
  */
 export function alignScreen(app) {
   const toasts = toaster($('toasts'));
@@ -261,11 +261,11 @@ export function alignScreen(app) {
       // the owner's flags (the Worker refuses anyone else); they join the deck if he hasn't started on it
       if (owner && !was) void app.flags().then(f => { flags = f; if (f.length && lines.length && last <= 0 && !touched) afterGesture(build); });
       if (started && could !== canWrite && lines.length) build();   // the answer buttons are made with the card
-      $('align-view').hidden = false; $('align-gate').hidden = true;
+      $('align-view').hidden = false;
       if (!started) { started = true; load(); }
     },
     // signed out: his answers go (the next person's come with their watch)
-    hide() { $('align-view').hidden = true; $('align-gate').hidden = false; mine = new Map(); heard = false; flags = []; owner = false; },
+    hide() { $('align-view').hidden = true; mine = new Map(); heard = false; flags = []; owner = false; },
     verdicts(list) {
       mine = new Map(list.map(v => [v.fact, v]));
       // the first time they come in, the deck is made again (seen lines to the back), if he hasn't started on it
