@@ -78,6 +78,23 @@ service cloud.firestore {
       allow delete: if can(g, ['admin', 'member']);
     }
 
+    // Align's verdicts: one doc per line of the shared notes he has answered (id: its line id with '/' and '#' as '~',
+    // cards.js docId). choice: what he said (cards.js CHOICES); text: his fix or edit; at: when (the queue's seen-at).
+    // Only members write them, and each says who; the Worker's flush (step 4) takes the owner's alone.
+    match /spaces/{g}/verdicts/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member']) && stamped()
+        && request.resource.data.keys().hasOnly(['fact', 'choice', 'text', 'at', 'by', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && request.resource.data.fact is string && request.resource.data.fact.size() <= 200
+        && request.resource.data.choice in ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen']
+        && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 2000))
+        && request.resource.data.at is number
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
     // modules: rules{ written from app/rules/*.rules by node tools/modules.mjs; edit those, not this block
     // }modules
 

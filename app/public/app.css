@@ -26,3 +26,30 @@ body { margin: 0; padding-bottom: calc(var(--tap) * 2 + env(safe-area-inset-bott
 .ui-sidebar-name { display: flex; align-items: center; gap: .5rem; }
 .app-mark { flex: none; border-radius: 22%; }
 .app-mark-big { display: block; margin: var(--pad) 0 var(--gap); }
+
+/* Align (screens/align.js): area chips, search, and one card at a time (the kit's cardPager). The back of a card (the
+   line as the notes have it and the answers) comes in with opacity and transform only, run by the compositor. */
+#align-page > :not(.ui-large-title) { max-width: 40rem; margin-inline: auto; padding-inline: var(--pad); }
+.align-chips { display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: none; }
+.align-chips .chip { flex: none; border-radius: 999px; padding: .35rem .8rem; }
+.align-chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent, #fff); border-color: var(--accent); }
+#align-find { display: block; width: 100%; box-sizing: border-box; margin: var(--gap) 0 .25rem; }
+#align-deck { min-height: 24rem; }
+.align-card { box-sizing: border-box; height: 100%; padding: var(--pad); border-radius: 1rem;
+  background: var(--surface-2, var(--surface, transparent)); border: 1px solid var(--line, rgba(127, 127, 127, .25)); }
+.align-where { margin: 0 0 .5rem; opacity: .75; }
+.align-stem { font-size: 1.1rem; font-weight: 600; margin: .25rem 0 1rem; }
+.align-options { display: grid; gap: .5rem; }
+.align-options button, .align-answers button, .align-show { width: 100%; text-align: left; min-height: var(--tap, 44px); }
+.align-options button.right { border-color: var(--success, #2e7d32); box-shadow: inset 4px 0 0 var(--success, #2e7d32); }
+.align-options button.wrong { border-color: var(--danger, #c62828); box-shadow: inset 4px 0 0 var(--danger, #c62828); }
+.align-back { opacity: 0; transform: translateY(.75rem); pointer-events: none; visibility: hidden;
+  transition: opacity .2s ease, transform .2s ease; }
+.align-card.answered .align-back { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
+.align-card.answered .align-show { display: none; }
+.align-line { font-size: 1.05rem; padding: .75rem; border-radius: .75rem; border-inline-start: 4px solid var(--accent); margin: 1rem 0; }
+.align-answer { font-weight: 600; margin: 1rem 0 0; }
+.align-answers { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.align-before { margin-top: .75rem; opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .align-back { transition: none; } }
+#fix textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }

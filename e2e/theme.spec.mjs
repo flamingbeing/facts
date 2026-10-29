@@ -1,6 +1,7 @@
 // @core/theme: the switch sets this device's theme and density, and the choice survives a reload.
 import AxeBuilder from './axe.mjs';
 import { test, expect, APP, openSettings } from './fixtures.mjs';
+import { APP as CONFIG } from '../app/src/config.js';
 
 test('theme and density switch: kept on this device, accessible in dark', async ({ phone }) => {
   const page = await phone();
@@ -71,7 +72,7 @@ test('accent: a picked colour is kept on this device, Reset goes back to the loo
   await openSettings(page);
   const reset = page.getByRole('button', { name: 'Reset colour' });
   await expect(reset).toBeHidden();
-  await expect(page.locator('#accent-pick')).toHaveValue('#3a6390');   // the app's (config.js)
+  await expect(page.locator('#accent-pick')).toHaveValue(CONFIG.accent);   // the app's (config.js)
   await page.locator('#accent-pick').fill('#c2417a');
   await expect(reset).toBeVisible();
   await page.reload({ waitUntil: 'domcontentloaded' });
@@ -80,7 +81,7 @@ test('accent: a picked colour is kept on this device, Reset goes back to the loo
   expect(await cssVar(page, '--accent')).not.toBe('');
   await page.getByRole('button', { name: 'Reset colour' }).click();
   await expect(reset).toBeHidden();
-  await expect(page.locator('#accent-pick')).toHaveValue('#3a6390');
+  await expect(page.locator('#accent-pick')).toHaveValue(CONFIG.accent);
 });
 
 // app-ui's looks (PRESETS in theme/presets.js). One test a look: 24 axe runs (~1 s each) in one test passed the timeout

@@ -63,6 +63,7 @@
     <nav class="ui-sidebar" id="side" aria-label="Sections">
       <p class="ui-sidebar-name"><img class="app-mark" src="icons/icon.svg" alt="" width="28" height="28">Facts</p>
       <a class="ui-side-link" href="./" data-tab-page="#items-page" aria-current="page">Items</a>
+      <a class="ui-side-link" href="./" data-tab-page="#align-page">Align</a>
       <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
     </nav>
 
@@ -105,6 +106,18 @@
         </div>
       </section>
 
+      <section class="ui-screen ui-tab-page" id="align-page" aria-labelledby="align-title" hidden>
+        <h1 class="ui-large-title" id="align-title">Align</h1>
+        <p id="align-gate">Sign in on the Items tab first.</p>
+        <div id="align-view" hidden>
+          <div id="align-areas" class="align-chips" role="group" aria-label="Area"></div>
+          <input id="align-find" type="text" enterkeyhint="go" placeholder="Find topics and lines" aria-label="Find cards" autocomplete="off">
+          <p id="align-count" class="small" role="status"></p>
+          <div id="align-state"></div>
+          <div id="align-deck" aria-label="Cards"></div>
+          <div id="align-empty"></div>
+        </div>
+      </section>
       <section class="ui-screen ui-tab-page" id="settings-page" aria-labelledby="settings-title" hidden>
         <h1 class="ui-large-title" id="settings-title">Settings</h1>
         <!-- cloud{ -->
@@ -120,6 +133,7 @@
 
     <nav class="ui-tabbar" data-minimise aria-label="Sections">
       <button type="button" class="ui-tab" data-tab-page="#items-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">✓</span>Items</button>
+      <button type="button" class="ui-tab" data-tab-page="#align-page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
       <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
     </nav>
   </div>
@@ -136,6 +150,18 @@
       <div class="row">
         <button id="edit-save" value="save">Save</button>
         <button id="edit-delete" value="delete" type="button" class="danger">Delete</button>
+        <button value="cancel" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="fix" aria-labelledby="fix-title">
+    <form method="dialog">
+      <h2 id="fix-title">What should it say?</h2>
+      <p id="fix-where" class="small"></p>
+      <label for="fix-text">The line</label>
+      <textarea id="fix-text" rows="5" maxlength="2000" required></textarea>
+      <div class="row">
+        <button value="save">Save</button>
         <button value="cancel" formnovalidate>Cancel</button>
       </div>
     </form>

@@ -16,7 +16,7 @@ export const AREA_NAMES = /** @type {Record<string, string>} */ ({
 /** @typedef {{ area: string, topics: { k: string, t: string, f: [string, string, string][], q: any[] }[] }} AreaFile */
 
 /** @param {AreaFile[]} files -> every fact, in file order, with its questions */
-export function factsFrom(files) {
+export function cardsFrom(files) {
   /** @type {Fact[]} */
   const out = [];
   for (const file of files) {
@@ -43,6 +43,10 @@ export function factsFrom(files) {
 export const docId = factId => factId.replace('/', '~').replace('#', '~');
 /** @param {string} id */
 export const factIdOf = id => { const [a, t, h] = id.split('~'); return `${a}/${t}#${h}`; };
+
+/** the app-sync collection of his answers (cloud.js; rules in firestore.app.rules) */
+export const VERDICTS = 'verdicts';
+/** @typedef {{ id: string, fact: string, choice: string, text?: string, at: number, by: string }} Verdict */
 
 /** what he can say about a card (verdict docs' `choice`); 'seen' = swiped on with no answer */
 export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen'];
@@ -75,8 +79,12 @@ export function questionFor(fact, turn = 0) {
   return order[turn % order.length];
 }
 
-/** @param {string} s  the fact's own Markdown emphasis (**bold**) as plain text */
-export const plain = s => String(s).replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|\W)[*_](\S.*?\S|\S)[*_](?=\W|$)/g, '$1$2').replace(/`/g, '');
+/** @param {string} s  the line's own Markdown emphasis (**bold**) as plain text; a blank's ____ stays */
+export const plain = s => String(s).replace(/\*\*(.+?)\*\*/g, '$1')
+  .replace(/(^|\W)([*_])(?![*_\s])(.*?[^*_\s]|[^*_\s])\2(?=\W|$)/g, '$1$3').replace(/`/g, '');
+
+/** @param {Verdict[]} verdicts -> line id -> when he last answered it (queue's seenAt) */
+export const seenFrom = verdicts => new Map(verdicts.map(v => [v.fact, v.at]));
 
 /** @param {Fact[]} list -> topics, by area then title: { topic, title, area } */
 export function topicsOf(list) {

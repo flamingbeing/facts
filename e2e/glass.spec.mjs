@@ -19,10 +19,14 @@ const surface = page => page.evaluate(() => {
 // the kit's bar is clear at the top of a page and turns to the glass once the page scrolls under it (.is-collapsed)
 const collapsed = page => page.evaluate(() => document.querySelector('.ui-bar')?.classList.add('is-collapsed'));
 
+// this app's own look (E, Workspace) has no glass, so these take look A, which has it
+const glassLook = page => page.getByRole('combobox', { name: 'Look', exact: true }).selectOption('a');
+
 test('glass by default; Solid in the switch takes it off, kept on reload and before the modules run', async ({ phone }) => {
   const page = await phone();
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
   await openSettings(page);
+  await glassLook(page);
   const root = page.locator('html');
   await expect(root).toHaveClass(/\bglass\b/);
   await collapsed(page);
@@ -54,6 +58,8 @@ test('glass by default; Solid in the switch takes it off, kept on reload and bef
 test('asked for more contrast: solid card colour, no blur', async ({ phone }) => {
   const page = await phone();
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await openSettings(page);
+  await glassLook(page);
   await page.emulateMedia({ contrast: 'more' });
   // Firefox: a media change by emulation does not re-cascade the sheets already loaded (a context option is not honoured
   // either); switching them off and on does

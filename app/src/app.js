@@ -9,6 +9,7 @@ import { signedOutScreen } from './screens/signed-out.js';
 import { noAccessScreen } from './screens/no-access.js';
 import { notSetUpScreen } from './screens/not-set-up.js';
 import { listScreen } from './screens/list.js';
+import { alignScreen } from './screens/align.js';
 import { startShell, settingsPage } from './shell.js';
 
 const typing = () => document.activeElement?.tagName === 'INPUT' && !!(/** @type {HTMLInputElement} */ (document.activeElement).value);
@@ -49,6 +50,7 @@ else {
   syncChip($('sync-chip'), { sync: /** @type {any} */ ({ status$: chipStatus$ }) });   // (the chip reads only status$)
   chipStatus$(st => { window.starter.status = st.state; });
   const list = listScreen(app);
+  const align = alignScreen(app);
   const show = screenSwitch({
     'signed-out': signedOutScreen(app, { onForget: ok => { if (ok) $('sign-out-msg').textContent = ''; } }),
     'no-access': noAccessScreen(),
@@ -67,12 +69,14 @@ else {
       $('sign-out').hidden = !s.user;
       if (s.user) $('sign-out-msg').textContent = '';
       show(s);
+      if (s.phase === 'ready') align.show(s); else align.hide();
     },
     onList(items, changed) {
       list.draw(items, changed);
       keepList(list.shown());
       window.starter.ready = true;
     },
+    onVerdicts(v) { align.verdicts(v); },
     onFiles(by) { list.drawFiles(by); },
   });
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { factsFrom, queue, questionFor, docId, factIdOf, plain, topicsOf } from '../src/cards.js';
+import { cardsFrom, queue, questionFor, docId, factIdOf, plain, topicsOf } from '../src/cards.js';
 
 const FILES = [
   { area: 'drugs', topics: [
@@ -12,7 +12,7 @@ const FILES = [
 ];
 
 test('facts: ids, titles and questions (bad MCQs and orphans dropped)', () => {
-  const facts = factsFrom(FILES);
+  const facts = cardsFrom(FILES);
   assert.deepEqual(facts.map(f => f.id), ['drugs/demo-drug#aaa111', 'drugs/demo-drug#bbb222', 'airway/tubes#ccc333']);
   assert.equal(facts[0].qs.length, 2);
   assert.equal(facts[1].qs.length, 0);
@@ -20,7 +20,7 @@ test('facts: ids, titles and questions (bad MCQs and orphans dropped)', () => {
 });
 
 test('queue: unseen with a question, unseen without, then seen oldest first; filters narrow it', () => {
-  const facts = factsFrom(FILES);
+  const facts = cardsFrom(FILES);
   assert.deepEqual(queue(facts, new Map()).map(f => f.id), ['drugs/demo-drug#aaa111', 'airway/tubes#ccc333', 'drugs/demo-drug#bbb222']);
   const seen = new Map([['drugs/demo-drug#aaa111', 20], ['airway/tubes#ccc333', 10]]);
   assert.deepEqual(queue(facts, seen).map(f => f.id), ['drugs/demo-drug#bbb222', 'airway/tubes#ccc333', 'drugs/demo-drug#aaa111']);
@@ -30,7 +30,7 @@ test('queue: unseen with a question, unseen without, then seen oldest first; fil
 });
 
 test('questionFor: MCQ first, then the others in turn; none for a bare fact', () => {
-  const [a, b] = factsFrom(FILES);
+  const [a, b] = cardsFrom(FILES);
   assert.equal(questionFor(a)?.kind, 'mcq');
   assert.equal(questionFor(a, 1)?.kind, 'statement');
   assert.equal(questionFor(a, 2)?.kind, 'mcq');
@@ -41,5 +41,7 @@ test('docId round trip; plain text; topics', () => {
   assert.equal(docId('drugs/demo-drug#aaa111'), 'drugs~demo-drug~aaa111');
   assert.equal(factIdOf('drugs~demo-drug~aaa111'), 'drugs/demo-drug#aaa111');
   assert.equal(plain('Dose **2 mg/kg** in `adults`'), 'Dose 2 mg/kg in adults');
-  assert.deepEqual(topicsOf(factsFrom(FILES)).map(t => t.topic), ['drugs/demo-drug', 'airway/tubes']);
+  assert.equal(plain('Onset in ____ (_fast_)'), 'Onset in ____ (fast)');
+  assert.equal(plain('snake_case_name and *one*'), 'snake_case_name and one');
+  assert.deepEqual(topicsOf(cardsFrom(FILES)).map(t => t.topic), ['drugs/demo-drug', 'airway/tubes']);
 });
