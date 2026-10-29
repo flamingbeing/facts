@@ -51,5 +51,8 @@ body { margin: 0; }
 .align-answer { font-weight: 600; margin: 1rem 0 0; }
 .align-answers { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .align-before { margin-top: .75rem; opacity: .7; }
+.align-note { margin: 0 0 .75rem; }
+.align-flag .align-answers { grid-template-columns: 1fr; }
+.align-flag .align-line + .align-where { margin-top: -.25rem; }
 @media (prefers-reduced-motion: reduce) { .align-back { transition: none; } }
 #fix textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; }

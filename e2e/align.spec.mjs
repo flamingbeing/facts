@@ -1,6 +1,7 @@
 // Align: the cards from the made-up notes in e2e/fixtures/data/ (served at /data/ by worker/data.js), the answers
 // saved as verdicts, a card left with no answer saved as 'seen', the fix sheet, the area chips and find, and viewers.
-import { test, expect, signIn, synced, db } from './fixtures.mjs';
+import { test, expect, signIn, synced, db, APP } from './fixtures.mjs';
+import { DEFAULT_ADMINS } from '../worker/members.js';
 
 // the verdicts are one shared set ('_'), so this file's tests run one at a time, each from none
 test.describe.configure({ mode: 'serial' });
@@ -177,3 +178,32 @@ for (const width of [412, 1280]) {
     expect(long.own).toBeGreaterThan(0);
   });
 }
+
+test('the owner gets the open flags first (high, clash, medium); an answer goes to the queue when the page hides', async ({ phone }) => {
+  const page = await phone();
+  await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#signed-out')).toBeVisible();
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);   // the owner: admin by default, no role doc
+  await expect(page.locator('#list-view')).toBeVisible();
+  await openAlign(page);
+  await expect.poll(() => page.evaluate(() => window.align.deck().slice(0, 4))).toEqual(['flag:F9002', 'flag:F9003', 'flag:F9001', 'drugs/demo-drug#aaa111']);
+  const c = await card(page);
+  await expect(c.locator('.align-where')).toHaveText('Flag · High · Sample agent');
+  await expect(c.locator('.align-line')).toHaveText('Onset in 60 s');
+  await expect(c.locator('.align-note')).toHaveText('Made-up note: onset seems slow.');
+  await c.getByRole('button', { name: 'Fix as the note says' }).click();
+  await expect(page.locator('#align-count')).toHaveText(/^2 of/);
+  await verdictOf('flag:F9002', 'accept-fix');
+  const clash = await card(page);
+  await expect(clash.locator('.align-line')).toHaveText(['Made-up line A', 'Made-up line B']);
+  // the page hides: the queue call goes now (locally the Worker lists what it would write)
+  const flushed = page.waitForResponse(r => r.url().endsWith('/api/flush'));
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  expect((await flushed).status()).toBe(200);
+  // the mark moved past his answer (a keepalive call's answer can't be read here; worker/test/flush.test.mjs has the items)
+  const v = await verdictOf('flag:F9002', 'accept-fix');
+  await expect.poll(async () => (await db.list('flush')).some(d => d.upto >= Date.parse(v.serverAt)), { timeout: 15_000 }).toBe(true);
+});

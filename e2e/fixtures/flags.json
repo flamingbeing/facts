@@ -1,0 +1,9 @@
+{
+ "generated": "made-up flags for the tests",
+ "flags": [
+  { "id": "F9001", "kind": "batch", "confidence": "med", "topic": "drugs/demo-drug.md", "line": "Dose **2 mg/kg** IV", "note": "Made-up note: the dose looks high.", "suggested_fix": "Dose 1 mg/kg IV", "status": "open" },
+  { "id": "F9002", "kind": "batch", "confidence": "high", "topic": "drugs/sample-agent", "line": "Onset in 60 s", "note": "Made-up note: onset seems slow.", "suggested_fix": null, "status": "open" },
+  { "id": "F9003", "kind": "conflict", "confidence": "med", "topic": "drugs/demo-drug", "topic_b": "drugs/sample-agent", "line": "Made-up line A", "line_b": "Made-up line B", "note": "Made-up note: the two topics differ.", "suggested_fix": null, "status": "open" },
+  { "id": "F9004", "kind": "batch", "confidence": "low", "topic": "drugs/demo-drug", "line": "Made-up fixed line", "note": "Made-up note.", "suggested_fix": null, "status": "fixed" }
+ ]
+}
