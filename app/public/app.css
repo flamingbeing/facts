@@ -16,10 +16,11 @@ input { padding: .5rem; flex: 1; min-width: 10rem; }
 /* the sample options (src/options.js) */
 #items.big li button { padding: 1rem .75rem; font-size: 1.15rem; }
 
-/* toasts sit above the tab bar on a phone */
-body { margin: 0; padding-bottom: calc(var(--tap) * 2 + env(safe-area-inset-bottom, 0px)); }
+/* toasts sit above the tab bar on a phone; the room under each screen for the tab bar is the kit's (tabBarRoom), so
+   the body adds none (a second room would make a screen that fits, as Align's filled card deck, scroll) */
+body { margin: 0; }
 .toasts { bottom: calc(var(--tap) + var(--pad) * 2 + env(safe-area-inset-bottom, 0px)); }
-@media (min-width: 600px) { body { padding-bottom: 0; } .toasts { bottom: var(--pad); } }
+@media (min-width: 600px) { .toasts { bottom: var(--pad); } }
 
 
 /* the app's icon beside its name in the side bar, and large on the signed-out screen */
@@ -34,7 +35,6 @@ body { margin: 0; padding-bottom: calc(var(--tap) * 2 + env(safe-area-inset-bott
 .align-chips .chip { flex: none; border-radius: 999px; padding: .35rem .8rem; }
 .align-chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent, #fff); border-color: var(--accent); }
 #align-find { display: block; width: 100%; box-sizing: border-box; margin: var(--gap) 0 .25rem; }
-#align-deck { min-height: 24rem; }
 .align-card { box-sizing: border-box; height: 100%; padding: var(--pad); border-radius: 1rem;
   background: var(--surface-2, var(--surface, transparent)); border: 1px solid var(--line, rgba(127, 127, 127, .25)); }
 .align-where { margin: 0 0 .5rem; opacity: .75; }
