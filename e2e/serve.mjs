@@ -18,7 +18,7 @@ const APP_DIR = process.env.APP_DIR ? path.resolve(ROOT, process.env.APP_DIR) : 
 let bump = 0;
 
 const env = {
-  FIREBASE_PROJECT: 'demo-starter-app', EMULATOR: '1',
+  FIREBASE_PROJECT: 'demo-facts', EMULATOR: '1',
   AUTH_EMULATOR: process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099',
   FIRESTORE_EMULATOR: process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080',
   // add: e2e env

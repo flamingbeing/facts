@@ -1,6 +1,6 @@
 {
-  "name": "Starter app",
-  "short_name": "Starter app",
+  "name": "Facts",
+  "short_name": "Facts",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

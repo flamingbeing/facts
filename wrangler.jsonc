@@ -3,7 +3,7 @@
 // the service account (SA_EMAIL, SA_KEY) is a Worker secret (wrangler secret put), kept across deploys.
 // tools/fill.mjs sets the name, route, project and bucket name.
 {
-  "name": "starter-app",
+  "name": "facts",
   "main": "worker/sites.js",
   "compatibility_date": "2026-10-01",
   "assets": {
@@ -21,8 +21,8 @@
   "keep_vars": true,
   // Workers Logs: keeps console lines such as the CSP reports (worker/csp-report.js) to read in the dashboard
   "observability": { "enabled": true },
-  "vars": { "FIREBASE_PROJECT": "demo-starter-app" },
+  "vars": { "FIREBASE_PROJECT": "anaesfacts-app" },
   // add: r2
   // the real address, as in worker/routes.js SITES; the first deploy adds the custom domain
-  "routes": [{ "pattern": "app.example.com", "custom_domain": true }]
+  "routes": [{ "pattern": "facts.anawj.com", "custom_domain": true }]
 }

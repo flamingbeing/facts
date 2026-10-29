@@ -1,5 +1,5 @@
 // The app's rules in the Firestore emulator: the rules kit's shared cases plus the app's own.
-//   firebase emulators:exec --only firestore --project demo-starter-app "node --test app/test/rules.test.mjs"
+//   firebase emulators:exec --only firestore --project demo-facts "node --test app/test/rules.test.mjs"
 // (from the repo root, after setup-tools or with .devkit/ copied from app-devkit)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +14,7 @@ const mods = existsSync(dir)
   : [];
 
 const emu = suite({
-  project: 'demo-starter-app',
+  project: 'demo-facts',
   rules: readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'),
   roles: ['admin', 'member', 'viewer'],
   collections: [

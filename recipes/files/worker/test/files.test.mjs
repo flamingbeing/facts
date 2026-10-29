@@ -5,7 +5,7 @@ import { handleFiles, defaultAccess, MAX_BYTES } from '../files.js';
 import worker from '../sites.js';
 import { memoryBucket } from '../../e2e/memory-bucket.mjs';
 
-const ORIGIN = 'https://app.example.com';
+const ORIGIN = 'https://facts.anawj.com';
 // made-up accounts: the token is the account's name, verify() looks it up
 const TOKENS = {
   ann: { sub: 'ann', g: { _: 'member' } },
@@ -129,7 +129,7 @@ test('sites.js routes /api/files/: 503 without a bucket, then the emulator token
     assert.equal((await put({ ...env, FILES, FIRESTORE_EMULATOR: 'fs' })).status, 403, 'revoked');
   } finally { globalThis.fetch = realFetch; }
   assert.deepEqual([...FILES.objects.keys()], ['_/a']);
-  r = await worker.fetch(new Request('https://app.example.com/api/files/_/a', { method: 'PUT', body: 'x', headers: { Authorization: `Bearer ${tok}`, 'Content-Length': '1' } }), { ...env, FILES });
+  r = await worker.fetch(new Request('https://facts.anawj.com/api/files/_/a', { method: 'PUT', body: 'x', headers: { Authorization: `Bearer ${tok}`, 'Content-Length': '1' } }), { ...env, FILES });
   assert.equal(r.status, 401, 'unsigned tokens only on localhost');
 });
 

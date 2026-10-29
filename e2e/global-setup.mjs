@@ -4,7 +4,7 @@
 // fixed names like glass.spec's "Sample item 14" turn up twice.
 import { waitForEmulators } from '../.devkit/playwright/helpers.mjs';
 
-const PROJECT = 'demo-starter-app';   // a demo- project: emulator only, never a live one
+const PROJECT = 'demo-facts';   // a demo- project: emulator only, never a live one
 
 export default async () => {
   await waitForEmulators(['firestore', 'auth']);

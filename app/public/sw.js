@@ -133,7 +133,7 @@ AppUpdate.init({
   app: 'app', version: VERSION, shell: SHELL, manifest: MANIFEST,
   never: ['/api/', /\/sw\.js$/],
   runtime: [
-    { name: 'kit', match: 'https://design.flamingbeing.com/v1/', strategy: 'stale-while-revalidate', max: 40 },
+    { name: 'kit', match: 'https://design.anawj.com/v1/', strategy: 'stale-while-revalidate', max: 40 },
     { name: 'pinned', match: /^https:\/\/core\.anawj\.com\/(sync|update|ui)\/\d+\.\d+\.\d+\//, strategy: 'cache-first', max: 40 },
   ],
 });

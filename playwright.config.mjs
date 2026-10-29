@@ -17,7 +17,7 @@ export default baseConfig({
   // PW_CHROMIUM: a Chromium already on the machine (when the pinned Playwright's own download isn't there)
   use: { baseURL: `http://localhost:${PORT}`, launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {} },
   webServer: [
-    emulatorServer({ project: 'demo-starter-app', only: 'firestore,auth', cwd: 'app', firebaseTools: FIREBASE_TOOLS }),
+    emulatorServer({ project: 'demo-facts', only: 'firestore,auth', cwd: 'app', firebaseTools: FIREBASE_TOOLS }),
     { command: `node e2e/serve.mjs ${PORT}`, url: `http://localhost:${PORT}/app/`, reuseExistingServer: !process.env.CI, timeout: 30_000 },
   ],
 });

@@ -77,7 +77,7 @@ test('an admin removes a member: the page loses the list, writes are refused, th
     const u = getAuth().currentUser;
     return u ? (await u.getIdTokenResult(true).then(r => r.claims.g ?? 'none', e => e.code)) : 'signed out';
   })).not.toHaveProperty('_');
-  const account = await (await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'}/identitytoolkit.googleapis.com/v1/projects/demo-starter-app/accounts:lookup`,
+  const account = await (await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST || '127.0.0.1:9099'}/identitytoolkit.googleapis.com/v1/projects/demo-facts/accounts:lookup`,
     { method: 'POST', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ localId: [uid] }) })).json();
   expect(Number(account.users[0].validSince)).toBeGreaterThan(0);
   // added back later: the next claims ask clears revoked/ and the list returns
