@@ -4,6 +4,9 @@
 // "Paste notes" mode: a whole topic or info dump goes to /api/file-many (worker/file-many.js), which splits it into lines;
 // each becomes its own confirm card (edit, Confirm, Discard), plus Confirm all / Discard all. Each Confirm queues one 'add'
 // verdict exactly as above.
+// "Draft on a topic" mode: he names a topic and the model (worker/draft.js) writes candidate lines. They are not his, so each
+// card is marked model-drafted, there is no Confirm all, and Confirm queues it with q 'model-drafted'.
+// The Sonnet/Haiku button picks the filing model for all three modes.
 // The topic list comes from the same data Align shows (data.js, kept on this device).
 import { toaster } from '@core/ui';
 import { loadData } from '../data.js';
@@ -14,8 +17,9 @@ const TOPIC = /^[a-z][a-z]*\/[a-z][a-z0-9-]{0,60}$/;
 
 /**
  * @param {{ verdict: (fact: string, choice: string, text: string, base: null, q?: string, section?: string) => Promise<string>,
- *   flush: () => Promise<string>, file: (text: string, topics: [string, string, string[]][]) => Promise<{ filing?: any, error?: string }>,
- *   fileMany: (text: string, topics: [string, string, string[]][]) => Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }> }} app
+ *   flush: () => Promise<string>, file: (text: string, topics: [string, string, string[]][], model?: string) => Promise<{ filing?: any, error?: string }>,
+ *   fileMany: (text: string, topics: [string, string, string[]][], model?: string) => Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>,
+ *   draft: (topic: string, topics: [string, string, string[]][], model?: string) => Promise<{ many?: { items: any[] }, error?: string }> }} app
  * @returns {{ owner: (yes: boolean) => void }}
  */
 export function addScreen(app) {
@@ -37,14 +41,16 @@ export function addScreen(app) {
   };
   let seq = 0;
   /** queue one 'add' verdict -> '' or why not
-   * @param {string} topic @param {string} section @param {string} line */
-  const queue = async (topic, section, line) => {
+   * @param {string} topic @param {string} section @param {string} line @param {boolean} [drafted] */
+  const queue = async (topic, section, line, drafted = false) => {
     topic = topic.trim().toLowerCase(); section = section.trim(); line = line.trim();
     if (!TOPIC.test(topic) || !AREAS.includes(topic.split('/')[0])) return 'Topic must look like area/name, e.g. drugs/dobutamine.';
     if (!section || !line) return 'Section and line are needed.';
-    return app.verdict(`add:${topic}#${Date.now().toString(36)}${(seq++).toString(36)}`, 'add', line, null, '', section);
+    return app.verdict(`add:${topic}#${Date.now().toString(36)}${(seq++).toString(36)}`, 'add', line, null, drafted ? 'model-drafted' : '', section);
   };
-  let many = false;
+  /** @type {'one' | 'many' | 'draft'} */
+  let mode = 'one';
+  let model = 'haiku';
   const status = (/** @type {string} */ m) => { $('add-status').textContent = m; };
   const clear = () => { $('add-card').hidden = true; input('add-line').value = ''; status(''); };
 
@@ -53,22 +59,22 @@ export function addScreen(app) {
 
   $('add-file').addEventListener('click', async () => {
     const text = input('add-text').value.trim();
-    if (!text) return status(many ? 'Paste some notes first.' : 'Type a fact first.');
+    if (!text) return status(mode === 'draft' ? 'Name a topic first.' : mode === 'many' ? 'Paste some notes first.' : 'Type a fact first.');
     load();
     status('Filing…'); $('add-file').toggleAttribute('disabled', true);
     const list = /** @type {[string, string, string[]][]} */ ([...topics].map(([id, t]) => [id, t.title, t.sections]));
-    if (many) {
-      const m = await app.fileMany(text, list);
+    if (mode !== 'one') {
+      const m = await (mode === 'draft' ? app.draft(text, list, model) : app.fileMany(text, list, model));
       $('add-file').toggleAttribute('disabled', false);
-      if (!m.many) return status(m.error || 'Couldn’t file those.');
+      if (!m.many) return status(m.error || (mode === 'draft' ? 'Couldn’t draft that.' : 'Couldn’t file those.'));
       $('add-cards').replaceChildren(...m.many.items.map(card));
       stack();
-      const bits = [`${m.many.items.length} to check.`];
-      if (m.many.cut) bits.push('Your paste was cut: only the first lines were filed; paste the rest again after these.');
-      if (m.many.skipped) bits.push(`${m.many.skipped} couldn’t be placed; they’re still in the box.`);
+      const bits = [mode === 'draft' ? `${m.many.items.length} drafted by the model: none is yours until you Confirm it.` : `${m.many.items.length} to check.`];
+      if (/** @type {any} */ (m.many).cut) bits.push('Your paste was cut: only the first lines were filed; paste the rest again after these.');
+      if (/** @type {any} */ (m.many).skipped) bits.push(`${/** @type {any} */ (m.many).skipped} couldn’t be placed; they’re still in the box.`);
       return status(bits.join(' '));
     }
-    const r = await app.file(text, list);
+    const r = await app.file(text, list, model);
     $('add-file').toggleAttribute('disabled', false);
     if (!r.filing) return status(r.error || 'Couldn’t file that one.');
     const f = r.filing;
@@ -80,15 +86,16 @@ export function addScreen(app) {
     $('add-card').hidden = false; status('');
   });
 
-  const stack = () => { $('add-stack').hidden = !many || !$('add-cards').children.length; };
+  const stack = () => { $('add-stack').hidden = mode === 'one' || !$('add-cards').children.length; $('add-confirm-all').hidden = mode === 'draft'; };
   /** one confirm card of the stack: editable topic, section and line; Confirm queues it, Discard drops it
-   * @param {{ topic: string, section: string, line: string, isNew?: boolean, title?: string }} f */
+   * @param {{ topic: string, section: string, line: string, isNew?: boolean, title?: string, drafted?: boolean }} f */
   function card(f) {
     const el = document.createElement('div');
     el.className = 'add-card';
     const field = (/** @type {string} */ label, /** @type {HTMLElement} */ control) => {
       const l = document.createElement('label'); l.textContent = label; el.append(l, control); return control;
     };
+    if (f.drafted) { el.classList.add('is-drafted'); const w = document.createElement('p'); w.className = 'small add-c-drafted'; w.textContent = 'Model-drafted: not from you. Check it before you Confirm.'; el.append(w); }
     if (f.isNew) { const p = document.createElement('p'); p.className = 'small'; p.textContent = `New topic${f.title ? `: ${f.title}` : ''}`; el.append(p); }
     const t = /** @type {HTMLInputElement} */ (field('Topic', Object.assign(document.createElement('input'), { type: 'text', value: f.topic, autocomplete: 'off', autocapitalize: 'none', spellcheck: false })));
     t.setAttribute('list', 'add-topics'); t.className = 'add-c-topic';
@@ -105,7 +112,7 @@ export function addScreen(app) {
     /** @returns {Promise<boolean>} queued */
     const send = async () => {
       el.classList.add('is-working'); ok.disabled = true;
-      const why = await queue(t.value, sc.value, ln.value);
+      const why = await queue(t.value, sc.value, ln.value, !!f.drafted);
       el.classList.remove('is-working'); ok.disabled = false;
       msg.textContent = why;
       if (!why) { el.remove(); stack(); }
@@ -130,17 +137,28 @@ export function addScreen(app) {
     if (n) toast.show(`${n} queued for the notes.`);
   });
   $('add-discard-all').addEventListener('click', () => { $('add-cards').replaceChildren(); stack(); status(''); });
-  $('add-mode').addEventListener('click', () => {
-    many = !many;
+  const setMode = (/** @type {'one' | 'many' | 'draft'} */ next) => {
+    mode = mode === next ? 'one' : next;
+    const many = mode === 'many', draft = mode === 'draft';
     $('add-mode').setAttribute('aria-pressed', String(many));
     $('add-mode').textContent = many ? 'One fact' : 'Paste notes';
-    $('add-text-label').textContent = many ? 'Your notes, pasted' : 'A fact, in your own words';
+    $('add-draft').setAttribute('aria-pressed', String(draft));
+    $('add-draft').textContent = draft ? 'One fact' : 'Draft on a topic';
+    $('add-text-label').textContent = draft ? 'A topic to draft lines on' : many ? 'Your notes, pasted' : 'A fact, in your own words';
     const box = /** @type {HTMLTextAreaElement} */ (/** @type {unknown} */ (input('add-text')));
-    box.rows = many ? 12 : 4; box.maxLength = many ? 12000 : 1000;
-    box.placeholder = many ? 'Paste a whole topic or a dump of lines; each becomes its own card' : 'e.g. Dobutamine can be given peripherally for a short time';
-    $('add-file').textContent = many ? 'File them' : 'File it';
-    if (many) clear();
+    box.rows = many ? 12 : draft ? 2 : 4; box.maxLength = many ? 60000 : draft ? 200 : 1000;
+    box.placeholder = draft ? 'e.g. Dobutamine, or Spinal anaesthesia complications' : many ? 'Paste a whole topic or a dump of lines; each becomes its own card' : 'e.g. Dobutamine can be given peripherally for a short time';
+    $('add-file').textContent = draft ? 'Draft lines' : many ? 'File them' : 'File it';
+    $('add-mode').hidden = draft; $('add-draft').hidden = many;
+    $('add-cards').replaceChildren(); clear();
     status(''); stack();
+  };
+  $('add-mode').addEventListener('click', () => setMode('many'));
+  $('add-draft').addEventListener('click', () => setMode('draft'));
+  $('add-model').addEventListener('click', () => {
+    model = model === 'sonnet' ? 'haiku' : 'sonnet';
+    $('add-model').setAttribute('aria-pressed', String(model === 'haiku'));
+    $('add-model').textContent = model === 'haiku' ? 'Haiku (faster)' : 'Sonnet';
   });
 
   $('add-discard').addEventListener('click', clear);

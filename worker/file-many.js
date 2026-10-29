@@ -5,9 +5,9 @@
 // his own words (file.js filing()). Nothing is saved here; each item becomes a confirm card and Confirm queues it.
 // Local (the tests): one canned item per non-empty line of the dump, no network.
 import { verifyIdToken } from './claims.js';
-import { AREAS, anthropic, cleanTopics, filing, gate, json, numbers } from './file.js';
+import { AREAS, anthropic, cleanTopics, filing, gate, json, numbers, pickModel } from './file.js';
 
-export const MAX_DUMP = 12000, MAX_LINES = 60, MAX_TOKENS = 16000;
+export const MAX_DUMP = 60000, MAX_LINES = 300, MAX_TOKENS = 64000;
 
 const norm = (/** @type {string} */ s) => s.replace(/\s+/g, ' ').trim();
 const unbullet = (/** @type {string} */ s) => s.trim().replace(/^[-•*]\s*/, '');
@@ -98,7 +98,7 @@ export async function handleFileMany(request, { verify, ask, local = false }) {
   }
   if (!ask) return json({ error: 'Filing isn’t set up yet: the Worker needs its ANTHROPIC_API_KEY secret.' }, 503);
   try {
-    const reply = await ask(manyPrompt(text, topics));
+    const reply = await ask(manyPrompt(text, topics), pickModel(g.body?.model));
     const out = manyFilings(reply, text, new Set(topics.map((/** @type {any[]} */ t) => t[0])));
     if (!out.items.length) console.error('file-many: reply not usable', String(reply).slice(0, 300));
     return out.items.length ? json(out) : json({ error: 'Couldn’t place any of that. Try a smaller paste.' }, 502);
