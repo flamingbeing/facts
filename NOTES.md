@@ -121,6 +121,20 @@ verdict with choice `add`, fact `add:<area>/<slug>#<time base36>` (the suffix ke
 doc; the processor ignores it), `text`, `section` (rules allow `section`, at most 100), then `app.flush()`. Local/test mode:
 a canned filing, no network. Tests: `worker/test/file.test.mjs` (model mocked), `e2e/add.spec.mjs`.
 
+**Paste notes** (a toggle by File it): a larger box (up to 12000 characters) for a whole topic or info dump.
+`app.fileMany` (POST `/api/file-many`, `worker/file-many.js`; same door as `/api/file` through `gate()` in `file.js`: same
+sign-in, owner check, secret and model) gets `{ items: [{ topic, section, line, isNew, title? }], cut, skipped }`. Sonnet
+splits the dump into one-line facts, up to 60 per call (`MAX_LINES`), each with `source`, the exact words of his text it
+came from. A line keeps its number only if it matches its source's (else that item falls back to his words, via `filing()`);
+an item whose source is not in his text must use only numbers he gave, or it is dropped (`skipped`). The reply is parsed
+tolerantly (text around it, or cut off by `max_tokens` 16000: complete items are kept). `cut` is true when the model said
+there was more, the reply was cut or over 60 came back; the page tells him to paste the rest again. The page shows a stack of
+confirm cards (edit topic, section, line; Confirm, Discard per card; Confirm all / Discard all). Each Confirm queues one
+`add` verdict exactly as above (the id suffix also has a counter, so quick adds to one topic never share a doc); Confirm all
+sends them in order and flushes once; a card that fails its check stays with the reason. The Align card is untouched.
+Tests: `worker/test/file-many.test.mjs` (model mocked), `e2e/add.spec.mjs` (this file runs on one worker: its clean-up
+removes every `add:` verdict).
+
 ## Test tab
 
 After Align, for anyone signed in with access (`screens/test.js`). It quizzes every line that has a question, using Align's

@@ -59,11 +59,11 @@ export function filing(reply, text, known) {
   return { topic, section, line, isNew, ...(isNew ? { title: String(o?.title || '').trim().slice(0, 100) || slug.replace(/-/g, ' ') } : {}) };
 }
 
-/** @param {any} env  -> (prompt) => the model's text */
-export const anthropic = env => async (/** @type {string} */ p) => {
+/** @param {any} env @param {number} [maxTokens]  -> (prompt) => the model's text */
+export const anthropic = (env, maxTokens = 1500) => async (/** @type {string} */ p) => {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1500, messages: [{ role: 'user', content: p }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: p }] }),
   });
   if (!r.ok) throw new Error(`anthropic ${r.status}`);
   // the reply can start with a non-text block (thinking); join every text block
@@ -72,29 +72,44 @@ export const anthropic = env => async (/** @type {string} */ p) => {
 };
 
 /**
+ * The shared door of /api/file and /api/file-many: POST, same origin, a verified sign-in that is the owner's, a JSON body.
+ * -> { body } or { fail: the Response }
+ * @param {Request} request @param {(t: string) => Promise<any>} verify
+ */
+export async function gate(request, verify) {
+  const url = new URL(request.url);
+  if (request.method !== 'POST') return { fail: json({ error: 'POST.' }, 405) };
+  const from = request.headers.get('Origin');
+  if (from && from !== url.origin) return { fail: json({ error: 'Wrong origin.' }, 403) };
+  const idToken = (request.headers.get('Authorization') || '').match(/^Bearer\s+(\S+)$/)?.[1];
+  if (!idToken) return { fail: json({ error: 'Sign in first.' }, 401) };
+  let token;
+  try { token = await verify(idToken); } catch { return { fail: json({ error: 'Sign in again.' }, 401) }; }
+  if (!isOwner(token)) return { fail: json({ error: 'Owner only.' }, 403) };
+  try { return { body: /** @type {any} */ (await request.json()) }; } catch { return { fail: json({ error: 'Send JSON.' }, 400) }; }
+}
+
+/** the topic list the page sends, cleaned: [id, title, sections][]
+ * @param {any} list */
+export const cleanTopics = list => (Array.isArray(list) ? list : []).slice(0, MAX_TOPICS)
+  .filter((/** @type {any} */ t) => Array.isArray(t) && typeof t[0] === 'string')
+  .map((/** @type {any[]} */ t) => [t[0].slice(0, 80), String(t[1] || '').slice(0, 100), (Array.isArray(t[2]) ? t[2] : []).map((/** @type {any} */ s) => String(s).slice(0, 60)).slice(0, 30)]);
+
+export { json };
+
+/**
  * deps = { verify(idToken), ask(prompt) -> text, or null when the key is not set, local }. Exported with its seams for
  * worker/test/file.test.mjs.
  * @param {Request} request @param {any} deps
  */
 export async function handleFile(request, { verify, ask, local = false }) {
-  const url = new URL(request.url);
-  if (request.method !== 'POST') return json({ error: 'POST.' }, 405);
-  const from = request.headers.get('Origin');
-  if (from && from !== url.origin) return json({ error: 'Wrong origin.' }, 403);
-  const idToken = (request.headers.get('Authorization') || '').match(/^Bearer\s+(\S+)$/)?.[1];
-  if (!idToken) return json({ error: 'Sign in first.' }, 401);
-  let token;
-  try { token = await verify(idToken); } catch { return json({ error: 'Sign in again.' }, 401); }
-  if (!isOwner(token)) return json({ error: 'Owner only.' }, 403);
-  /** @type {any} */
-  let body;
-  try { body = await request.json(); } catch { return json({ error: 'Send JSON.' }, 400); }
+  const g = await gate(request, verify);
+  if (g.fail) return g.fail;
+  const body = g.body;
   const text = String(body?.text || '').trim();
   if (!text) return json({ error: 'Type a fact first.' }, 400);
   if (text.length > MAX_TEXT) return json({ error: 'Too long: one fact at a time.' }, 400);
-  const topics = (Array.isArray(body?.topics) ? body.topics : []).slice(0, MAX_TOPICS)
-    .filter((/** @type {any} */ t) => Array.isArray(t) && typeof t[0] === 'string')
-    .map((/** @type {any[]} */ t) => [t[0].slice(0, 80), String(t[1] || '').slice(0, 100), (Array.isArray(t[2]) ? t[2] : []).map((/** @type {any} */ s) => String(s).slice(0, 60)).slice(0, 30)]);
+  const topics = cleanTopics(body?.topics);
   if (local) {
     const first = topics[0]?.[0] || 'drugs/demo-drug';
     return json({ topic: first, section: 'Notes', line: text.replace(/^[-•*]\s*/, ''), isNew: false });

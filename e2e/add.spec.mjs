@@ -6,6 +6,8 @@ import { DEFAULT_ADMINS } from '../worker/members.js';
 
 const tab = '.ui-tab[data-tab-page="#add-page"]:visible, .ui-side-link[data-tab-page="#add-page"]:visible';
 const addVerdicts = async () => (await db.list('spaces/_/verdicts')).filter(d => d.fact.startsWith('add:'));
+// one worker for this file: each test's clean-up (beforeEach) would otherwise remove the other's verdicts mid-run
+test.describe.configure({ mode: 'serial' });
 test.beforeEach(async () => { for (const d of await addVerdicts()) await db.del(`spaces/_/verdicts/${d.by}~${d.fact.replaceAll(/[/#]/g, '~')}`); });
 
 /** @param {import('@playwright/test').Page} page */
@@ -60,4 +62,47 @@ test('the owner files a fact: the card shows topic, section and line; Confirm qu
   await page.locator('#add-confirm').click();
   await expect(page.locator('#add-status')).toContainText('area/name');
   expect((await addVerdicts()).length).toBe(1);
+});
+
+test('Paste notes: a dump becomes a stack of cards; Confirm one, Discard one, Confirm all queues the rest', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
+  await openAdd(page);
+  await page.locator('#add-mode').click();
+  await expect(page.locator('#add-mode')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '12000');
+  await page.locator('#add-text').fill('- Made-up first fact: dose 3 mg/kg\n- Made-up second fact\n\n- Made-up third fact\n- Made-up fourth fact');
+  await page.locator('#add-file').click();
+  const cards = page.locator('#add-cards .add-card');
+  await expect(cards).toHaveCount(4);
+  await expect(cards.nth(0).locator('.add-c-line')).toHaveValue('Made-up first fact: dose 3 mg/kg');
+  await expect(cards.nth(0).locator('.add-c-section')).toHaveValue('Notes');
+  // the single-fact card stays out of the way
+  await expect(page.locator('#add-card')).toBeHidden();
+  // edit the first card and confirm just it
+  await cards.nth(0).locator('.add-c-topic').fill('drugs/demo-drug');
+  await cards.nth(0).locator('.add-c-section').fill('Dosage');
+  await cards.nth(0).locator('.add-c-line').fill('Dose 3 mg/kg IV');
+  const flushed = page.waitForResponse(r => r.url().endsWith('/api/flush'));
+  await cards.nth(0).locator('.add-c-confirm').click();
+  expect((await flushed).status()).toBe(200);
+  await expect(cards).toHaveCount(3);
+  await expect.poll(async () => (await addVerdicts()).length, { timeout: 15_000 }).toBe(1);
+  expect(await addVerdicts()).toMatchObject([{ choice: 'add', text: 'Dose 3 mg/kg IV', section: 'Dosage' }]);
+  // discard the next, break the one after: Confirm all queues the good one and keeps the bad one with its reason
+  await cards.nth(0).locator('.add-c-discard').click();
+  await expect(cards).toHaveCount(2);
+  await cards.nth(0).locator('.add-c-topic').fill('nonsense');
+  await page.locator('#add-confirm-all').click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards.nth(0)).toContainText('area/name');
+  await expect.poll(async () => (await addVerdicts()).length, { timeout: 15_000 }).toBe(2);
+  // Discard all
+  await page.locator('#add-discard-all').click();
+  await expect(page.locator('#add-stack')).toBeHidden();
+  expect((await addVerdicts()).length).toBe(2);
+  // back to one fact
+  await page.locator('#add-mode').click();
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '1000');
 });
