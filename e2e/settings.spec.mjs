@@ -1,6 +1,6 @@
 // @core/settings on the Settings page: the look is a device value (kept across sign-out and reload), an account
 // switch follows the new account, and the open page passes axe. The app has no account options yet (src/options.js).
-import { test, expect, signIn, synced, seenOne, verdictHas, openSettings, openAlign } from './fixtures.mjs';
+import { test, expect, signIn, synced, seenOne, db, openSettings, openAlign } from './fixtures.mjs';
 import AxeBuilder from './axe.mjs';
 
 const open = openSettings;
@@ -39,6 +39,13 @@ test('a direct switch from one account to another: the next answer is the new ac
   await a.evaluate(e => window.starter.signInAs(e), email);
   await expect(a.locator('#align-count')).toBeVisible();
   await expect.poll(() => a.evaluate(() => window.starter.ready)).toBe(true);
-  // an answer now belongs to the new account
-  await verdictHas(uid, await seenOne(a));
+  await synced(a);
+  // an answer now belongs to the new account; align.spec's beforeEach may wipe the shared
+  // verdicts from another worker, so answer again if ours was swept
+  let ok = false;
+  for (let i = 0; i < 3 && !ok; i++) {
+    const fact = await seenOne(a);
+    ok = await expect.poll(async () => (await db.list('spaces/_/verdicts')).some(d => d.by === uid && d.fact === fact), { timeout: 8_000 }).toBe(true).then(() => true, () => false);
+  }
+  expect(ok).toBe(true);
 });
