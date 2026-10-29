@@ -144,3 +144,36 @@ test('the fix sheet closed with Escape saves nothing; a swipe past a line he fix
   const v = await verdictOf('drugs/demo-drug#aaa111');
   expect([v.choice, v.text]).toEqual(['repo-wrong', 'Dose 3 mg/kg IV']);
 });
+
+// the deck fills the screen down to the tab bar (the kit's cardPager fill), so a whole card shows with no scroll of
+// its own and the page itself does not scroll; a card taller than that scrolls in its slot
+for (const width of [412, 1280]) {
+  test(`the card fills the screen below the count line down to the tab bar (${width} px)`, async ({ sized }) => {
+    const page = await sized(width);
+    await signIn(page, 'member');
+    await openAlign(page);
+    const m = () => page.evaluate(() => {
+      const d = /** @type {HTMLElement} */ (document.getElementById('align-deck'));
+      const padPx = () => { const x = document.createElement('div'); x.style.height = 'var(--pad)'; d.after(x); const h = x.getBoundingClientRect().height; x.remove(); return h; };
+      const bar = document.querySelector('.ui-tabbar:not([hidden])'), b = bar?.getBoundingClientRect();
+      const slot = /** @type {HTMLElement} */ (d.querySelector('.ui-card-slot:not([inert])'));
+      return { top: d.getBoundingClientRect().top, bottom: d.getBoundingClientRect().bottom, count: document.getElementById('align-count').getBoundingClientRect().bottom,
+        floor: b && b.height ? b.top : innerHeight, pad: padPx(),
+        page: document.scrollingElement.scrollHeight - innerHeight, own: slot.scrollHeight - slot.clientHeight,
+        card: /** @type {HTMLElement} */ (slot.firstElementChild).getBoundingClientRect().height, slotH: slot.clientHeight };
+    });
+    await expect.poll(async () => { const r = await m(); return Math.abs(r.floor - r.pad - r.bottom); }, { message: 'the deck ends one --pad above the tab bar (or the window)' }).toBeLessThanOrEqual(2);
+    const r = await m();
+    expect(r.top - r.count, 'it starts under the count line').toBeLessThan(40);
+    expect(r.page, 'the page does not scroll').toBeLessThanOrEqual(1);
+    // on a phone the whole card fits; on an 800 px laptop the big title above leaves the MCQ card (its answers, hidden
+    // until a tap, keep their room) a few px short, so there only the fill is checked
+    if (width < 600) expect(r.own, 'the card has no scroll of its own').toBe(0);
+    expect(r.card, 'the card fills its slot').toBeCloseTo(r.slotH, 0);
+    // a card far taller than the screen keeps the deck's height and scrolls inside it
+    await page.evaluate(() => { document.querySelector('#align-deck .ui-card-slot:not([inert]) .align-stem').textContent = 'A long question. '.repeat(300); });
+    const long = await m();
+    expect(long.bottom).toBeCloseTo(r.bottom, 0);
+    expect(long.own).toBeGreaterThan(0);
+  });
+}

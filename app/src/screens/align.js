@@ -171,7 +171,7 @@ export function alignScreen(app) {
     empty.show(!!lines.length && !deck.length);
     stage.hidden = !deck.length;
     if (!deck.length) { $('align-count').textContent = ''; return; }
-    pager = cardPager(stage, { card, onShow: shown });
+    pager = cardPager(stage, { card, onShow: shown, fill: true });
     Object.assign(window, { align: { deck: () => deck.map(l => l.id), index: () => pager?.index() ?? -1, go: (/** @type {1 | -1} */ s) => pager?.go(s) } });
   };
 
