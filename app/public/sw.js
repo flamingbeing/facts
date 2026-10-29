@@ -31,6 +31,7 @@ const SHELL = [
   'src/options.js',
   'src/roles.js',
   'src/screen-switch.js',
+  'src/screens/add.js',
   'src/screens/align.js',
   'src/screens/no-access.js',
   'src/screens/not-set-up.js',

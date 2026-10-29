@@ -46,10 +46,10 @@ export const docId = (uid, factId) => `${uid}~${factId.replaceAll(/[/#]/g, '~')}
 
 /** the app-sync collection of his answers (cloud.js; rules in firestore.app.rules) */
 export const VERDICTS = 'verdicts';
-/** @typedef {{ id: string, fact: string, choice: string, text?: string, q?: string, at: number, by: string }} Verdict */
+/** @typedef {{ id: string, fact: string, choice: string, text?: string, section?: string, q?: string, at: number, by: string }} Verdict */
 
 /** what he can say about a card (verdict docs' `choice`); 'seen' = swiped on with no answer; a flag card: accept-fix, keep, edit */
-export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep'];
+export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add'];
 
 /**
  * The open flags (the owner's, from /api/flags) as cards, before every line: high first, then the cross-topic ones,

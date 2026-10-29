@@ -65,6 +65,7 @@
     <nav class="ui-sidebar" id="side" aria-label="Sections">
       <p class="ui-sidebar-name"><img class="app-mark" src="icons/icon.svg" alt="" width="28" height="28">Facts</p>
       <a class="ui-side-link" href="./" data-tab-page="#align-page" aria-current="page">Align</a>
+      <a class="ui-side-link" href="./" data-tab-page="#add-page" id="side-add" hidden>Add</a>
       <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
     </nav>
 
@@ -101,6 +102,28 @@
           <div id="align-empty"></div>
         </div>
       </section>
+      <section class="ui-screen ui-tab-page" id="add-page" aria-labelledby="add-title" hidden>
+        <h1 class="ui-large-title" id="add-title">Add</h1>
+        <label for="add-text">A fact, in your own words</label>
+        <textarea id="add-text" rows="4" maxlength="1000" placeholder="e.g. Dobutamine can be given peripherally for a short time"></textarea>
+        <div class="row"><button type="button" id="add-file">File it</button></div>
+        <p id="add-status" class="small" role="status"></p>
+        <div id="add-card" class="add-card" hidden>
+          <p id="add-new" class="small" hidden></p>
+          <label for="add-topic">Topic</label>
+          <input id="add-topic" type="text" list="add-topics" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <datalist id="add-topics"></datalist>
+          <label for="add-section">Section</label>
+          <input id="add-section" type="text" list="add-sections" autocomplete="off" maxlength="60">
+          <datalist id="add-sections"></datalist>
+          <label for="add-line">The line</label>
+          <textarea id="add-line" rows="4" maxlength="500"></textarea>
+          <div class="row">
+            <button type="button" id="add-confirm">Confirm</button>
+            <button type="button" id="add-discard">Discard</button>
+          </div>
+        </div>
+      </section>
       <section class="ui-screen ui-tab-page" id="settings-page" aria-labelledby="settings-title" hidden>
         <h1 class="ui-large-title" id="settings-title">Settings</h1>
         <!-- cloud{ -->
@@ -116,6 +139,7 @@
 
     <nav class="ui-tabbar" data-minimise aria-label="Sections">
       <button type="button" class="ui-tab" data-tab-page="#align-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
+      <button type="button" class="ui-tab" data-tab-page="#add-page" id="tab-add" hidden><span class="ui-tab-icon" aria-hidden="true">＋</span>Add</button>
       <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
     </nav>
   </div>

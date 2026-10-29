@@ -45,6 +45,14 @@ test('flush: his change answers since the mark go into the day file; the mark mo
   assert.equal(github.writes.length, 1);
 });
 
+test('flush: an Add tab line (choice add) is queued with its section', async () => {
+  const github = fakeGithub();
+  const query = async () => [v('x', 'add', 2000, 'own', { fact: 'add:drugs/dobutamine#k1', text: 'Line', section: 'Dosage' })];
+  assert.deepEqual(await (await ask('/api/flush', 'own', { admin: fakeAdmin(), github, query })).json(), { ok: true, n: 1 });
+  assert.deepEqual(github.writes[0].json.items, [{ id: 'x', fact: 'add:drugs/dobutamine#k1', choice: 'add', text: 'Line', section: 'Dosage', at: 2000 }]);
+  assert.equal(ACTION.includes('add'), true);
+});
+
 test('flush: nothing new, or nothing to change: no commit, the mark still moves', async () => {
   const adm = fakeAdmin(), github = fakeGithub();
   assert.deepEqual(await (await ask('/api/flush', 'own', { admin: adm, github, query: async () => [] })).json(), { ok: true, n: 0 });

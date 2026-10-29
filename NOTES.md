@@ -110,3 +110,13 @@ text changed). Nothing is saved, so there is no format to migrate.
 - Flags (questions the notes mark as doubtful) need an owner-only route on the Worker: next step.
 - Tests: `e2e/align.spec.mjs` uses made-up bundles in `e2e/fixtures/data/`. The jank gate in the same file is the card swipe at 4x
   CPU slowdown, with app-ui's frame budget.
+
+## Add tab
+
+Owner only (role admin; the tab and side link stay hidden for others, and the Worker refuses anyone else). `screens/add.js`:
+text -> `app.file` (POST `/api/file`, `worker/file.js`) sends the topic list the page already has (id, title, sections) and
+gets `{ topic, section, line, isNew }`. Sonnet (`claude-sonnet-5-5`, Worker secret `ANTHROPIC_API_KEY`, never in a file)
+rewords to the notes' house style; if it changes or drops a number the line falls back to his own words. Confirm saves a
+verdict with choice `add`, fact `add:<area>/<slug>#<time base36>` (the suffix keeps two adds to one topic from sharing a
+doc; the processor ignores it), `text`, `section` (rules allow `section`, at most 100), then `app.flush()`. Local/test mode:
+a canned filing, no network. Tests: `worker/test/file.test.mjs` (model mocked), `e2e/add.spec.mjs`.
