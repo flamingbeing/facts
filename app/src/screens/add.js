@@ -50,7 +50,7 @@ export function addScreen(app) {
   };
   /** @type {'one' | 'many' | 'draft'} */
   let mode = 'one';
-  let model = 'sonnet';
+  let model = 'haiku';
   const status = (/** @type {string} */ m) => { $('add-status').textContent = m; };
   const clear = () => { $('add-card').hidden = true; input('add-line').value = ''; status(''); };
 
@@ -146,7 +146,7 @@ export function addScreen(app) {
     $('add-draft').textContent = draft ? 'One fact' : 'Draft on a topic';
     $('add-text-label').textContent = draft ? 'A topic to draft lines on' : many ? 'Your notes, pasted' : 'A fact, in your own words';
     const box = /** @type {HTMLTextAreaElement} */ (/** @type {unknown} */ (input('add-text')));
-    box.rows = many ? 12 : draft ? 2 : 4; box.maxLength = many ? 30000 : draft ? 200 : 1000;
+    box.rows = many ? 12 : draft ? 2 : 4; box.maxLength = many ? 60000 : draft ? 200 : 1000;
     box.placeholder = draft ? 'e.g. Dobutamine, or Spinal anaesthesia complications' : many ? 'Paste a whole topic or a dump of lines; each becomes its own card' : 'e.g. Dobutamine can be given peripherally for a short time';
     $('add-file').textContent = draft ? 'Draft lines' : many ? 'File them' : 'File it';
     $('add-mode').hidden = draft; $('add-draft').hidden = many;

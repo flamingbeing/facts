@@ -9,10 +9,10 @@ import { verifyIdToken } from './claims.js';
 import { isOwner } from './flush.js';
 
 export const MODEL = 'claude-sonnet-5-5';
-/** the filing model he picks on the page: Sonnet (default) or the faster Haiku */
+/** the filing model he picks on the page: Haiku (default, faster) or Sonnet */
 export const MODELS = { sonnet: MODEL, haiku: 'claude-haiku-5-5' };
 /** @param {unknown} v */
-export const pickModel = v => MODELS[/** @type {'sonnet'|'haiku'} */ (v)] || MODEL;
+export const pickModel = v => MODELS[/** @type {'sonnet'|'haiku'} */ (v)] || MODELS.haiku;
 export const AREAS = ['drugs', 'regional', 'airway', 'comorbidities', 'procedures', 'physiology', 'equipment', 'crises', 'other'];
 const SLUG = /^[a-z][a-z0-9-]{0,60}$/;
 const MAX_TEXT = 1000, MAX_TOPICS = 2000;

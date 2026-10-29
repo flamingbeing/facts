@@ -228,8 +228,8 @@ export async function start({ canReload = null }) {
     },
     // the Add tab: where a typed fact belongs and the line in house style (worker/file.js, owner only).
     // topics: [id, title, sections][] from the notes' data. -> { ok: filing } or { error }
-    /** @param {string} text @param {[string, string, string[]][]} topics @param {string} [model]  'sonnet' (default) or 'haiku' @returns {Promise<{ filing?: any, error?: string }>} */
-    file: async (text, topics, model = 'sonnet') => {
+    /** @param {string} text @param {[string, string, string[]][]} topics @param {string} [model]  'haiku' (default) or 'sonnet' @returns {Promise<{ filing?: any, error?: string }>} */
+    file: async (text, topics, model = 'haiku') => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };
@@ -240,7 +240,7 @@ export async function start({ canReload = null }) {
     },
     // the Add tab's "Paste notes" mode: a pasted dump split into filings (worker/file-many.js, owner only).
     /** @param {string} text @param {[string, string, string[]][]} topics @param {string} [model] @returns {Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>} */
-    fileMany: async (text, topics, model = 'sonnet') => {
+    fileMany: async (text, topics, model = 'haiku') => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };
@@ -251,7 +251,7 @@ export async function start({ canReload = null }) {
     },
     // the Add tab's "Draft on a topic": the model writes candidate lines (worker/draft.js, owner only); each item is marked drafted.
     /** @param {string} topic @param {[string, string, string[]][]} topics @param {string} [model] @returns {Promise<{ many?: { items: any[] }, error?: string }>} */
-    draft: async (topic, topics, model = 'sonnet') => {
+    draft: async (topic, topics, model = 'haiku') => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };

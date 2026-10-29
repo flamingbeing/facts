@@ -40,7 +40,7 @@ test('draft: every returned item is marked drafted; the picked model is used; ju
   assert.equal(items[1].line, 'Starts at 5 mcg/kg/min');
   assert.equal(used, 'claude-haiku-5-5');
   await ask('own', { topic: 'Madeupamine' }, { ask: async (p, m) => { used = m; return 'nothing'; } });
-  assert.equal(used, MODEL);
+  assert.equal(used, 'claude-haiku-5-5');
   assert.equal((await ask('own', { topic: 'Madeupamine' }, { ask: async () => 'nothing' })).status, 502);
   assert.equal((await ask('own', { topic: 'Madeupamine' }, { ask: async () => { throw new Error('boom'); } })).status, 502);
   assert.match(draftPrompt('Madeupamine', TOPICS), /Madeupamine/);

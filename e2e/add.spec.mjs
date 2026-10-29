@@ -71,7 +71,7 @@ test('Paste notes: a dump becomes a stack of cards; Confirm one, Discard one, Co
   await openAdd(page);
   await page.locator('#add-mode').click();
   await expect(page.locator('#add-mode')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '30000');
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '60000');
   await page.locator('#add-text').fill('- Made-up first fact: dose 3 mg/kg\n- Made-up second fact\n\n- Made-up third fact\n- Made-up fourth fact');
   await page.locator('#add-file').click();
   const cards = page.locator('#add-cards .add-card');
@@ -112,8 +112,10 @@ test('Draft on a topic: cards are marked model-drafted, no Confirm all, and Conf
   await signIn(page, 'member');
   await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
   await openAdd(page);
-  await page.locator('#add-model').click();
   await expect(page.locator('#add-model')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#add-model')).toHaveText('Haiku (faster)');
+  await page.locator('#add-model').click();
+  await expect(page.locator('#add-model')).toHaveText('Sonnet');
   await page.locator('#add-draft').click();
   await expect(page.locator('#add-mode')).toBeHidden();
   await page.locator('#add-text').fill('Made-up topic');

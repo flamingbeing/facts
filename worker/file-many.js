@@ -7,7 +7,7 @@
 import { verifyIdToken } from './claims.js';
 import { AREAS, anthropic, cleanTopics, filing, gate, json, numbers, pickModel } from './file.js';
 
-export const MAX_DUMP = 30000, MAX_LINES = 150, MAX_TOKENS = 32000;
+export const MAX_DUMP = 60000, MAX_LINES = 300, MAX_TOKENS = 64000;
 
 const norm = (/** @type {string} */ s) => s.replace(/\s+/g, ' ').trim();
 const unbullet = (/** @type {string} */ s) => s.trim().replace(/^[-•*]\s*/, '');
