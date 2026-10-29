@@ -81,6 +81,7 @@ service cloud.firestore {
     // Align's verdicts: one doc per person and line of the shared notes (id: their uid, '~', the line id with '/' and '#'
     // as '~'; cards.js docId), so one member's answer never overwrites another's. choice: what he said (cards.js CHOICES); text: his fix or edit; q: the question he saw; at: when (the queue's seen-at).
     // A flag card's fact is 'flag:<flag id>' (the flags are the owner's, from /api/flags). An Add tab line is 'add:<area>/<slug>#<time>' with choice 'add', text = the line, section = its section.
+    // The Test tab's "This fact is wrong" is fact 'wrong:<line id>' with choice 'flag' and text = the line (the owner's flush queues it).
     // Only members write them, and each says who; the Worker's flush (worker/flush.js) takes the owner's alone.
     match /spaces/{g}/verdicts/{id} {
       allow read: if can(g, ['admin', 'member', 'viewer']);
@@ -88,11 +89,32 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['fact', 'choice', 'text', 'q', 'section', 'at', 'by', 'updatedAt', 'serverAt', '_edits'])
         && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
         && request.resource.data.fact is string && request.resource.data.fact.size() <= 200
-        && request.resource.data.choice in ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add']
+        && request.resource.data.choice in ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add', 'flag']
         && (!('section' in request.resource.data) || (request.resource.data.section is string && request.resource.data.section.size() <= 100))
         && (!('q' in request.resource.data) || (request.resource.data.q is string && request.resource.data.q.size() <= 1000))
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 2000))
         && request.resource.data.at is number
+        && request.resource.data.by == request.auth.uid
+        && id == request.auth.uid + '~' + request.resource.data.fact.replace('[/#]', '~')
+        && request.resource.data.updatedAt is number;
+      allow delete: if false;
+    }
+
+    // The Test tab's spacing: one doc per person and line (id: their uid, '~', the line id with '/' and '#' as '~'), the schedule
+    // state of that line (src/schedule.js: stability s in days, difficulty d 1-10, due and last in ms, answers, misses, whether
+    // the last was right). Everyone signed in writes their own, viewers too (Test is the readers' tab); never deleted.
+    match /spaces/{g}/recall/{id} {
+      allow read: if can(g, ['admin', 'member', 'viewer']);
+      allow create, update: if can(g, ['admin', 'member', 'viewer']) && stamped()
+        && request.resource.data.keys().hasOnly(['fact', 's', 'd', 'due', 'last', 'reps', 'lapses', 'ok', 'at', 'by', 'updatedAt', 'serverAt', '_edits'])
+        && (!('_edits' in request.resource.data) || request.resource.data._edits is map)
+        && request.resource.data.fact is string && request.resource.data.fact.size() <= 200
+        && request.resource.data.s is number && request.resource.data.s > 0 && request.resource.data.s <= 36500
+        && request.resource.data.d is number && request.resource.data.d >= 1 && request.resource.data.d <= 10
+        && request.resource.data.due is number && request.resource.data.last is number && request.resource.data.at is number
+        && request.resource.data.reps is int && request.resource.data.reps >= 1
+        && request.resource.data.lapses is int && request.resource.data.lapses >= 0
+        && request.resource.data.ok is bool
         && request.resource.data.by == request.auth.uid
         && id == request.auth.uid + '~' + request.resource.data.fact.replace('[/#]', '~')
         && request.resource.data.updatedAt is number;

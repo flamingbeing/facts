@@ -65,6 +65,7 @@
     <nav class="ui-sidebar" id="side" aria-label="Sections">
       <p class="ui-sidebar-name"><img class="app-mark" src="icons/icon.svg" alt="" width="28" height="28">Facts</p>
       <a class="ui-side-link" href="./" data-tab-page="#align-page" aria-current="page">Align</a>
+      <a class="ui-side-link" href="./" data-tab-page="#test-page" id="side-test" hidden>Test</a>
       <a class="ui-side-link" href="./" data-tab-page="#add-page" id="side-add" hidden>Add</a>
       <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
     </nav>
@@ -100,6 +101,23 @@
           <div id="align-state"></div>
           <div id="align-deck" aria-label="Cards"></div>
           <div id="align-empty"></div>
+        </div>
+      </section>
+      <section class="ui-screen ui-tab-page" id="test-page" aria-labelledby="test-title" hidden>
+        <h1 class="ui-large-title" id="test-title">Test</h1>
+        <div id="test-view">
+          <div id="test-areas" class="align-chips" role="group" aria-label="Area"></div>
+          <input id="test-find" type="text" enterkeyhint="go" placeholder="Find topics and lines" aria-label="Find cards" autocomplete="off">
+          <div class="align-countrow">
+            <p id="test-count" class="small" role="status"></p>
+          </div>
+          <details class="test-scores">
+            <summary id="test-score" class="small">Score 0/0</summary>
+            <ul id="test-topics"></ul>
+          </details>
+          <div id="test-state"></div>
+          <div id="test-deck" aria-label="Cards"></div>
+          <div id="test-empty"></div>
         </div>
       </section>
       <section class="ui-screen ui-tab-page" id="add-page" aria-labelledby="add-title" hidden>
@@ -139,6 +157,7 @@
 
     <nav class="ui-tabbar" data-minimise aria-label="Sections">
       <button type="button" class="ui-tab" data-tab-page="#align-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
+      <button type="button" class="ui-tab" data-tab-page="#test-page" id="tab-test" hidden><span class="ui-tab-icon" aria-hidden="true">✓</span>Test</button>
       <button type="button" class="ui-tab" data-tab-page="#add-page" id="tab-add" hidden><span class="ui-tab-icon" aria-hidden="true">＋</span>Add</button>
       <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
     </nav>

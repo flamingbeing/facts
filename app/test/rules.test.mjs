@@ -85,9 +85,40 @@ test('verdicts: members write their own (by and the id are them, the id is the l
   assert.equal((await as('admin').set(add, addDoc(), at)).ok, true);
   assert.equal((await as('admin').set(add, addDoc({ section: 'x'.repeat(101) }), at)).ok, false, 'section at most 100');
   assert.equal((await as('admin').set(add, addDoc({ section: 5 }), at)).ok, false, 'section is a string');
+  // the Test tab's "This fact is wrong": fact wrong:<line id>, choice flag, text = the line
+  const wrong = 'spaces/_/verdicts/u-admin~wrong:drugs~dobutamine~k1';
+  const flag = (extra = {}) => v('u-admin', { fact: 'wrong:drugs/dobutamine#k1', choice: 'flag', text: 'A line', ...extra });
+  assert.equal((await as('admin').set(wrong, flag(), at)).ok, true);
+  assert.equal((await as('admin').set(wrong, flag({ choice: 'flags' }), at)).ok, false, 'a known choice');
   // the flush marks (worker/flush.js) are the Worker's alone
   assert.equal((await as('admin').get('flush/u-admin')).ok, false);
   assert.equal((await as('admin').set('flush/u-admin', { upto: 1 })).ok, false);
+});
+
+test('recall: everyone signed in writes their own spacing state (viewers too); by and the id are them; typed fields only; never deleted', async () => {
+  await emu.clear();
+  const at = { serverAt: true };
+  const r = (by, extra = {}) => ({ fact: 'drugs/demo#aaa111', s: 3.7, d: 5.2, due: 2, last: 1, reps: 1, lapses: 0, ok: true, at: 1, by, updatedAt: 1, ...extra });
+  const path = role => `spaces/_/recall/u-${role}~drugs~demo~aaa111`;
+  for (const role of ['admin', 'member', 'viewer']) {
+    assert.equal((await as(role).set(path(role), r(`u-${role}`), at)).ok, true, `${role} saves their own`);
+    assert.equal((await as(role).get(path(role))).ok, true);
+  }
+  assert.equal((await as('member').get(path('admin'))).ok, true, 'the group can read it (a list listen cannot ask for one doc)');
+  assert.equal((await as('member').set(path('admin'), r('u-member'), at)).ok, false, 'not another person\'s doc');
+  assert.equal((await as('member').set(path('member'), r('u-admin'), at)).ok, false, 'by is the writer');
+  assert.equal((await as('member').set('spaces/_/recall/u-member~airway~x~y', r('u-member'), at)).ok, false, 'the id is the line\'s');
+  assert.equal((await as('member').set(path('member'), r('u-member'))).ok, false, 'unstamped');
+  assert.equal((await as('member').set(path('member'), r('u-member', { note: 'x' }), at)).ok, false, 'no extra fields');
+  assert.equal((await as('member').set(path('member'), r('u-member', { s: 0 }), at)).ok, false, 'stability above 0');
+  assert.equal((await as('member').set(path('member'), r('u-member', { d: 11 }), at)).ok, false, 'difficulty 1 to 10');
+  assert.equal((await as('member').set(path('member'), r('u-member', { due: 'soon' }), at)).ok, false, 'due is a number');
+  assert.equal((await as('member').set(path('member'), r('u-member', { reps: 0 }), at)).ok, false, 'at least one answer');
+  assert.equal((await as('member').set(path('member'), r('u-member', { reps: 1.5 }), at)).ok, false, 'answers are whole');
+  assert.equal((await as('member').set(path('member'), r('u-member', { ok: 'yes' }), at)).ok, false, 'ok is true or false');
+  assert.equal((await as('member').set(path('member'), r('u-member', { lapses: 2, reps: 3, ok: false }), at)).ok, true, 'a later answer');
+  assert.equal((await emu.as('u-new', {}).set('spaces/_/recall/u-new~drugs~demo~aaa111', r('u-new'), at)).ok, false, 'no role, no access');
+  assert.equal((await as('member').delete(path('member'))).ok, false, 'never deleted');
 });
 
 test('bin entries: writers stamp them; viewers only read', async () => {

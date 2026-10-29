@@ -53,6 +53,14 @@ test('flush: an Add tab line (choice add) is queued with its section', async () 
   assert.equal(ACTION.includes('add'), true);
 });
 
+test('flush: a Test tab "This fact is wrong" (choice flag) is queued with the line; the Test tab\'s other saves never are', async () => {
+  const github = fakeGithub();
+  const query = async () => [v('w', 'flag', 2000, 'own', { fact: 'wrong:drugs/x#abc', text: 'The line as shown' }), v('x', 'flag', 3000, 'bob', { fact: 'wrong:drugs/x#abc', text: 'Not his' })];
+  assert.deepEqual(await (await ask('/api/flush', 'own', { admin: fakeAdmin(), github, query })).json(), { ok: true, n: 1 });
+  assert.deepEqual(github.writes[0].json.items, [{ id: 'w', fact: 'wrong:drugs/x#abc', choice: 'flag', text: 'The line as shown', at: 2000 }]);
+  assert.equal(ACTION.includes('flag'), true);
+});
+
 test('flush: nothing new, or nothing to change: no commit, the mark still moves', async () => {
   const adm = fakeAdmin(), github = fakeGithub();
   assert.deepEqual(await (await ask('/api/flush', 'own', { admin: adm, github, query: async () => [] })).json(), { ok: true, n: 0 });

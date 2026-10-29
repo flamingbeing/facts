@@ -2,6 +2,7 @@
 
 ## Now
 
+- **Test tab** (29 Oct, SGT; PR "Facts: Test tab"): quiz over every line with a question, FSRS-style spacing (`schedule.js`), per-topic score, per-user recall docs, owner-only "This fact is wrong" (queue item `flag`) that sends a line back to Align. Log tab is next; it can reuse `ask.js`, `cards.js` and `app.verdict/flush`.
 - **Add tab** (29 Oct, SGT; owner only, after Align): he types a fact, `/api/file` (worker/file.js, Claude Sonnet) files it, a confirm card (topic, section, line, all editable) -> Confirm saves a verdict `add` (`add:<area>/<slug>#<time>`, text, section) and flushes it to the queue; Discard clears. The Worker needs the secret `ANTHROPIC_API_KEY` (until then the route says "not set up"). Test and Log tabs come next and reuse `app.verdict/flush/file` (cloud.js), the `loadData` topic list, and the tab markup pattern (tab + side link + `.ui-tab-page`).
 - Items tab removed (29 Oct, 17:15 SGT): Align is the first tab and holds the sign-in, no-access and not-set-up gates and the sync chip; Settings keeps sign-out. The sample list, its sheet and its tests are gone; e2e saves use Align's seen verdict.
 - Filled (29 Oct): look E, Violet. **Align** tab: cards from the notes, answers saved as verdicts, area chips and

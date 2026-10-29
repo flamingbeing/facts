@@ -46,10 +46,14 @@ export const docId = (uid, factId) => `${uid}~${factId.replaceAll(/[/#]/g, '~')}
 
 /** the app-sync collection of his answers (cloud.js; rules in firestore.app.rules) */
 export const VERDICTS = 'verdicts';
+/** the app-sync collection of the Test tab's spacing, one doc per person and line (docId; schedule.js Recall + fact, at, by) */
+export const RECALL = 'recall';
 /** @typedef {{ id: string, fact: string, choice: string, text?: string, section?: string, q?: string, at: number, by: string }} Verdict */
 
 /** what he can say about a card (verdict docs' `choice`); 'seen' = swiped on with no answer; a flag card: accept-fix, keep, edit */
-export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add'];
+export const CHOICES = ['agree', 'repo-wrong', 'me-wrong', 'also-true', 'bad-question', 'edit', 'seen', 'accept-fix', 'keep', 'add', 'flag'];
+/** the Test tab's "This fact is wrong": a verdict on 'wrong:<line id>' with choice 'flag' and text = the line, queued for the notes' processor */
+export const WRONG = 'wrong:';
 
 /**
  * The open flags (the owner's, from /api/flags) as cards, before every line: high first, then the cross-topic ones,
@@ -107,6 +111,21 @@ export function questionFor(fact, turn = 0) {
 /** @param {string} s  the line's own Markdown emphasis (**bold**) as plain text; a blank's ____ stays */
 export const plain = s => String(s).replace(/\*\*(.+?)\*\*/g, '$1')
   .replace(/(^|\W)([*_])(?![*_\s])(.*?[^*_\s]|[^*_\s])\2(?=\W|$)/g, '$1$3').replace(/`/g, '');
+
+/**
+ * The lines an open flag is about (the owner's flags, from /api/flags): the flag's line, and for a clash the other topic's
+ * too, matched on topic and text. The Test tab leaves them out until the flag is settled.
+ * @param {Flag[]} flags @param {Fact[]} list -> line ids
+ */
+export function flaggedIds(flags, list) {
+  const key = (/** @type {string} */ topic, /** @type {string} */ line) => `${topic}\n${plain(line).trim()}`;
+  const keys = new Set();
+  for (const f of flags) {
+    keys.add(key(f.topic, f.line));
+    if (f.lineB) keys.add(key(f.topicB ?? '', f.lineB));
+  }
+  return new Set(list.filter(f => keys.has(key(f.topic, f.text))).map(f => f.id));
+}
 
 /** @param {Verdict[]} verdicts -> line id -> when he last answered it (queue's seenAt) */
 export const seenFrom = verdicts => new Map(verdicts.map(v => [v.fact, v.at]));
