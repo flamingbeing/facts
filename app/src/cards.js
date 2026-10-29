@@ -5,6 +5,9 @@
 // fact and question counts } } }; <area>.json = { area, topics: [{ k, t, f: [[hash, section, text]], q: [[hash, kind, stem,
 // answer, options?]] }] }. A fact's id is <area>/<topic>#<hash>; when its line changes, so does its id.
 
+/** area chips' order: Procedures and Comorbidities first (his choice), then the rest as they come
+ * @param {string[]} seen */
+export const chipOrder = seen => { const first = ['procedures', 'comorbidities']; return [...first.filter(a => seen.includes(a)), ...seen.filter(a => !first.includes(a))]; };
 export const AREAS = ['drugs', 'regional', 'airway', 'comorbidities', 'procedures', 'physiology', 'equipment', 'crises', 'other'];
 export const AREA_NAMES = /** @type {Record<string, string>} */ ({
   drugs: 'Drugs', regional: 'Regional', airway: 'Airway', comorbidities: 'Comorbidities', procedures: 'Procedures',
