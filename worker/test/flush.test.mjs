@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleFlush, mergeQueue, flagCard, isOwner, sgtDate, ACTION } from '../flush.js';
+import { handleFlush, mergeQueue, flagCard, isOwner, sgtDate, ACTION, logItem } from '../flush.js';
 import { DEFAULT_ADMINS } from '../members.js';
 
 const ORIGIN = 'https://facts.anawj.com';
@@ -51,6 +51,15 @@ test('flush: an Add tab line (choice add) is queued with its section', async () 
   assert.deepEqual(await (await ask('/api/flush', 'own', { admin: fakeAdmin(), github, query })).json(), { ok: true, n: 1 });
   assert.deepEqual(github.writes[0].json.items, [{ id: 'x', fact: 'add:drugs/dobutamine#k1', choice: 'add', text: 'Line', section: 'Dosage', at: 2000 }]);
   assert.equal(ACTION.includes('add'), true);
+});
+
+test('flush: an Add tab change (choice edit) is queued with the old line and why; the Log shows them', async () => {
+  const github = fakeGithub();
+  const query = async () => [v('e', 'edit', 2000, 'own', { fact: 'edit:drugs/dobutamine#d1@k1', text: 'New line', section: 'Dosage', old: 'Old line', why: 'Lower dose.' })];
+  assert.deepEqual(await (await ask('/api/flush', 'own', { admin: fakeAdmin(), github, query })).json(), { ok: true, n: 1 });
+  const item = { id: 'e', fact: 'edit:drugs/dobutamine#d1@k1', choice: 'edit', text: 'New line', section: 'Dosage', old: 'Old line', why: 'Lower dose.', at: 2000 };
+  assert.deepEqual(github.writes[0].json.items, [item]);
+  assert.deepEqual(logItem(item), { fact: item.fact, choice: 'edit', at: 2000, text: 'New line', section: 'Dosage', old: 'Old line', reason: 'Lower dose.', status: 'queued' });
 });
 
 test('flush: a Test tab "This fact is wrong" (choice flag) is queued with the line; the Test tab\'s other saves never are', async () => {

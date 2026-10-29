@@ -113,36 +113,54 @@ text changed). Nothing is saved, so there is no format to migrate.
 
 ## Add tab
 
-Owner only (role admin; the tab and side link stay hidden for others, and the Worker refuses anyone else). `screens/add.js`:
-text -> `app.file` (POST `/api/file`, `worker/file.js`) sends the topic list the page already has (id, title, sections) and
-gets `{ topic, section, line, isNew }`. Sonnet (`claude-sonnet-5-5`, Worker secret `ANTHROPIC_API_KEY`, never in a file)
-rewords to the notes' house style; if it changes or drops a number the line falls back to his own words. Confirm saves a
-verdict with choice `add`, fact `add:<area>/<slug>#<time base36>` (the suffix keeps two adds to one topic from sharing a
-doc; the processor ignores it), `text`, `section` (rules allow `section`, at most 100), then `app.flush()`. Local/test mode:
-a canned filing, no network. Tests: `worker/test/file.test.mjs` (model mocked), `e2e/add.spec.mjs`.
+Owner only (role admin; the tab and side link stay hidden for others, and the Worker refuses anyone else). One box (up to
+60000 characters) for one fact or a whole pasted topic or dump, one route: `screens/add.js` -> `app.file(text, topics,
+model)` (POST `/api/file`, `worker/file.js`). The page sends the topic list it already has (id, title, sections) and
+`model: 'haiku' | 'sonnet'`; the Worker maps it to `claude-haiku-5-5` (default; `output_config.effort: "low"`) or
+`claude-sonnet-5-5`; the page never names a model id. A small toggle by File picks Sonnet, remembered on this device
+(`localStorage` `add.model`). Secret `ANTHROPIC_API_KEY` (never in a file; without it the route answers 503). No sampling
+parameters; `stop_reason` `refusal` is a plain 502, `max_tokens` marks the result `cut`. Decision:
+[0015](docs/decisions/0015-add-tab-haiku-and-dedupe.md).
 
-**Paste notes** (a toggle by File it): a larger box (up to 60000 characters) for a whole topic or info dump.
-`app.fileMany` (POST `/api/file-many`, `worker/file-many.js`; same door as `/api/file` through `gate()` in `file.js`: same
-sign-in, owner check, secret and model) gets `{ items: [{ topic, section, line, isNew, title? }], cut, skipped }`. Sonnet
-splits the dump into one-line facts, up to 300 per call (`MAX_LINES`), each with `source`, the exact words of his text it
-came from. A line keeps its number only if it matches its source's (else that item falls back to his words, via `filing()`);
-an item whose source is not in his text must use only numbers he gave, or it is dropped (`skipped`). The reply is parsed
-tolerantly (text around it, or cut off by `max_tokens` 64000: complete items are kept). `cut` is true when the model said
-there was more, the reply was cut or over 300 came back; the page tells him to paste the rest again. The page shows a stack of
-confirm cards (edit topic, section, line; Confirm, Discard per card; Confirm all / Discard all). Each Confirm queues one
-`add` verdict exactly as above (the id suffix also has a counter, so quick adds to one topic never share a doc); Confirm all
-sends them in order and flushes once; a card that fails its check stays with the reason. The Align card is untouched.
-Tests: `worker/test/file-many.test.mjs` (model mocked), `e2e/add.spec.mjs` (this file runs on one worker: its clean-up
-removes every `add:` verdict).
+Two passes, raw `fetch` to the Messages API (a Worker has no SDK):
 
-**Model button** (Haiku by default, Sonnet on tap): the page sends `model: 'sonnet' | 'haiku'` to `/api/file`, `/api/file-many`
-and `/api/draft`; `pickModel()` in `worker/file.js` maps it to `claude-sonnet-5-5` / `claude-haiku-5-5`, anything else is Haiku.
+1. **Split + file.** The house rules and the topic list (~590 topics, ~35k tokens) are the `system` block with
+   `cache_control: ephemeral`, so a second call within 5 minutes reads them at about a tenth of the price; his text is the
+   user message. Up to 300 one-line facts per call (`MAX_LINES`, `max_tokens` 64000), each with `source`, the exact words of his text it came
+   from. A line keeps its numbers only if they match its source's (else it falls back to his words, `filing()`); an item
+   whose source isn't in his text must use only numbers he gave, or it is dropped (`skipped`). Tolerant parse (`parseList`).
+2. **Reconcile.** For each existing topic touched, the Worker reads that topic's lines from the same area JSON `data.js`
+   serves (GitHub raw, edge-cached 5 minutes; the page uploads nothing big) and sends them with the new facts. Each fact
+   gets one action: `new`, `duplicate` (cites the line id), `merge` (the merged line) or `correct` (the replacement and a
+   one-line why). `verdicts()` checks each: the cited id must exist; every number of the fact must survive and the line may
+   use only numbers from the fact or the old line (a merge also keeps the old line's); a line identical to the old one, an
+   unknown id or a skipped fact stays `new`. A topic over `CHUNK` (120000 characters) is sent in chunks, so every call stays
+   under 100k input tokens (Haiku's price rises above that); the first non-new result wins. Up to 4 topics run at once.
 
-**Draft on a topic** (a toggle by File it): he names a topic; `app.draft` (POST `/api/draft`, `worker/draft.js`, same door)
-has the model write up to 20 well-established lines. The notes rule is that a fact is only his, so these are never filed
-quietly: every item is `drafted: true`, its card says "Model-drafted: not from you", there is no Confirm all (Discard all
-only), and each Confirm queues the usual `add` verdict with `q: 'model-drafted'` (rules already allow `q`) so the processor
-can tell. Tests: `worker/test/draft.test.mjs`, `e2e/add.spec.mjs`.
+Response: `{ items: [{ topic, section, line, isNew, title?, action, old?: { id, section, line }, why? }], cut, skipped,
+model, usage: { calls, input, output, cacheRead, cacheWrite } }` (usage is also logged).
+
+Cards (`#add-cards`): `new` = editable topic, section, line; Confirm saves verdict `add` (fact `add:<area>/<slug>#<time
+base36 + counter>`, `text`, `section`). `merge` / `correct` = "Was: <old line>", the new line (editable), why; "Confirm
+change" saves verdict `edit` (fact `edit:<area>/<slug>#<line id>@<tag>`, `text` = new line, `section` = the old line's,
+`old`, `why`; rules allow `old` <= 2000 and `why` <= 300). Duplicates queue nothing: they're set aside, collapsed under
+"N already there", each with "Add anyway" (back as a new card). Confirm all includes changes and then says so ("Confirm
+all (incl. 2 changes)"); a line he verified is never changed without his tap. Each Confirm flushes; the processor in the
+private notes repo applies `edit:` items (if the line changed since, it holds them). Local/test mode: the same two passes
+against a canned model (`localAsk`: everything goes to the first topic; a repeat of a line is a duplicate, "More: ..."
+merges with its first line, "Not: ..." corrects it). Tests: `worker/test/file.test.mjs` (fake Anthropic for both passes),
+`e2e/add.spec.mjs` (one worker; it clears its own `add:` and `edit:` verdicts, which Align's clean-up leaves alone).
+
+**Draft on a topic** (a toggle by File): he names a topic; `app.draft` (POST `/api/draft`, `worker/draft.js`, same door,
+model and cached system block as `/api/file`) has the model write up to 20 well-established lines. A fact is only his, so
+these are never filed quietly: every item is `drafted: true`, its card says "Model-drafted: not from you", there is no
+Confirm all, and each Confirm queues the usual `add` verdict with `q: 'model-drafted'` (rules already allow `q`) so the
+processor can tell. Drafts go through pass 2 only to set aside lines already there (`duplicate`); a draft is never offered
+as a merge or correction of his lines. Tests: `worker/test/draft.test.mjs`, `e2e/add.spec.mjs`.
+
+### Add tab cost
+
+Measured from the route's `usage` on the live app (to be filled in after the first live run).
 
 ## Test tab
 
