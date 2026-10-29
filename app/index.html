@@ -67,6 +67,7 @@
       <a class="ui-side-link" href="./" data-tab-page="#align-page" aria-current="page">Align</a>
       <a class="ui-side-link" href="./" data-tab-page="#test-page" id="side-test" hidden>Test</a>
       <a class="ui-side-link" href="./" data-tab-page="#add-page" id="side-add" hidden>Add</a>
+      <a class="ui-side-link" href="./" data-tab-page="#log-page" id="side-log" hidden>Log</a>
       <a class="ui-side-link" href="./" data-tab-page="#settings-page" id="side-settings">Settings</a>
     </nav>
 
@@ -142,6 +143,22 @@
           </div>
         </div>
       </section>
+      <section class="ui-screen ui-tab-page" id="log-page" aria-labelledby="log-title" hidden>
+        <h1 class="ui-large-title" id="log-title">Log</h1>
+        <div id="log-filter" class="align-chips" role="group" aria-label="Show">
+          <button type="button" class="chip" data-filter="changes" aria-pressed="true">Changes only</button>
+          <button type="button" class="chip" data-filter="all" aria-pressed="false">All</button>
+        </div>
+        <h2 class="log-h">My answers</h2>
+        <ul id="log-answers" class="log-list"></ul>
+        <p id="log-answers-empty" class="small" hidden>Nothing here yet.</p>
+        <div id="log-queue-block" hidden>
+          <h2 class="log-h">Sent to the notes (14 days)</h2>
+          <p id="log-queue-status" class="small" role="status"></p>
+          <ul id="log-queue" class="log-list"></ul>
+          <p id="log-queue-empty" class="small" hidden>Nothing sent in the last 14 days.</p>
+        </div>
+      </section>
       <section class="ui-screen ui-tab-page" id="settings-page" aria-labelledby="settings-title" hidden>
         <h1 class="ui-large-title" id="settings-title">Settings</h1>
         <!-- cloud{ -->
@@ -159,6 +176,7 @@
       <button type="button" class="ui-tab" data-tab-page="#align-page" aria-current="page"><span class="ui-tab-icon" aria-hidden="true">⇄</span>Align</button>
       <button type="button" class="ui-tab" data-tab-page="#test-page" id="tab-test" hidden><span class="ui-tab-icon" aria-hidden="true">✓</span>Test</button>
       <button type="button" class="ui-tab" data-tab-page="#add-page" id="tab-add" hidden><span class="ui-tab-icon" aria-hidden="true">＋</span>Add</button>
+      <button type="button" class="ui-tab" data-tab-page="#log-page" id="tab-log" hidden><span class="ui-tab-icon" aria-hidden="true">☰</span>Log</button>
       <button type="button" class="ui-tab" data-tab-page="#settings-page" id="tab-settings"><span class="ui-tab-icon" aria-hidden="true">≡</span>Settings</button>
     </nav>
   </div>

@@ -247,6 +247,15 @@ export async function start({ canReload = null }) {
         return r?.ok ? (await r.json()).flags || [] : [];
       } catch { return []; }
     },
+    // the notes' queue, the last 14 days, for the Log tab (worker/flush.js; owner only): the items, or null if it can't be read
+    /** @returns {Promise<any[] | null>} */
+    queue: async () => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        const r = token ? await fetch('/api/queue', { headers: { Authorization: `Bearer ${token}` } }) : null;
+        return r?.ok ? (await r.json()).items || [] : null;
+      } catch { return null; }
+    },
     // admins: set someone's role, or remove them (they lose access at once; their sessions end). -> '' or the reason
     members: {
       /** @param {string} uid @param {'admin' | 'member' | 'viewer'} role */

@@ -7,6 +7,8 @@
 //                     -> { ok, n } (n: items added). The page calls it after a card, once the finger is up, and on close;
 //                     a lost call costs nothing, the next one takes everything since the mark.
 //   GET  /api/flags   the open flags (flags.json in the same repo) -> { flags: [...] }
+//   GET  /api/queue   the last 14 days of queue files, newest first, each item with its status (queued, done + the PR
+//                     link or note, held + why) for the Log tab -> { items: [...] }. Private text: owner only, never stored here.
 //
 // The repo is written with a fine-grained GitHub token (Worker secret GITHUB_TOKEN: that repo only, contents read and
 // write; kept in the owner's secrets vault first). Local (the tests): the flags come from e2e/fixtures/flags.json and
@@ -21,6 +23,7 @@ const API = `https://api.github.com/repos/${REPO}/contents/`;
 // agree, me-wrong and seen only move the mark
 export const ACTION = ['repo-wrong', 'edit', 'also-true', 'bad-question', 'accept-fix', 'keep', 'add', 'flag'];
 const PAGE = 200, PAGES = 5;
+const LOG_DAYS = 14;
 
 /** @param {any} token */
 export const isOwner = token => token?.email_verified === true && DEFAULT_ADMINS.includes(String(token.email || '').toLowerCase());
@@ -55,6 +58,25 @@ export const flagCard = f => ({
   ...(f.kind === 'conflict' ? { topicB: String(f.topic_b || '').replace(/\.md$/, ''), lineB: f.line_b } : {}),
 });
 
+/**
+ * A queue item as the Log tab shows it: no ids; status queued / done (pr: the PR link, or note: what was done) / held (why).
+ * @param {any} i
+ */
+export const logItem = i => {
+  const done = typeof i.done === 'string' ? i.done : i.done ? 'done' : '', held = typeof i.held === 'string' ? i.held : i.held ? 'held' : '';
+  return {
+    fact: i.fact, choice: i.choice, at: i.at, ...(i.text ? { text: i.text } : {}), ...(i.section ? { section: i.section } : {}),
+    ...(held ? { status: 'held', why: held } : done ? { status: 'done', ...(/^https:\/\/github\.com\//.test(done) ? { pr: done } : { note: done }) } : { status: 'queued' }),
+  };
+};
+
+/**
+ * The Log tab's list from the day files (each { items }), within the last LOG_DAYS days, newest first.
+ * @param {{ items?: any[] }[]} files @param {number} nowMs
+ */
+export const queueLog = (files, nowMs) => files.flatMap(f => f?.items || []).filter(i => Number(i.at) >= nowMs - LOG_DAYS * 864e5)
+  .sort((a, b) => b.at - a.at).map(logItem);
+
 /** @param {any} env */
 const gh = env => {
   const headers = { Authorization: `Bearer ${env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'facts-worker', 'X-GitHub-Api-Version': '2022-11-28' };
@@ -67,6 +89,13 @@ const gh = env => {
       const j = await r.json();
       const text = new TextDecoder().decode(Uint8Array.from(atob(String(j.content).replace(/\s/g, '')), c => c.charCodeAt(0)));
       return { sha: j.sha, json: JSON.parse(text) };
+    },
+    /** @param {string} dir -> the file names in it (none if it is missing) */
+    async names(dir) {
+      const r = await fetch(API + dir, { headers });
+      if (r.status === 404) return [];
+      if (!r.ok) throw new Error(`github list ${r.status}`);
+      return (await r.json()).map((/** @type {any} */ x) => String(x.name));
     },
     /** @param {string} path @param {unknown} json @param {string | undefined} sha @param {string} message -> ok, or false on a clash */
     async write(path, json, sha, message) {
@@ -115,9 +144,10 @@ const json = (/** @type {unknown} */ body, status = 200) => new Response(JSON.st
  * github (gh(env) or null: local, write nothing), now() }. Exported with its seams for worker/test/flush.test.mjs.
  * @param {Request} request @param {any} deps
  */
-export async function handleFlush(request, { verify, admin: adm, firestore, github, flagsLocal, now = Date.now, query = since }) {
+export async function handleFlush(request, { verify, admin: adm, firestore, github, flagsLocal, queueLocal, now = Date.now, query = since }) {
   const url = new URL(request.url);
-  const flags = url.pathname === '/api/flags';
+  const queue = url.pathname === '/api/queue';
+  const flags = url.pathname === '/api/flags' || queue;
   if (request.method !== (flags ? 'GET' : 'POST')) return json({ error: flags ? 'GET.' : 'POST.' }, 405);
   const from = request.headers.get('Origin');
   if (from && from !== url.origin) return json({ error: 'Wrong origin.' }, 403);
@@ -127,6 +157,13 @@ export async function handleFlush(request, { verify, admin: adm, firestore, gith
   try { token = await verify(idToken); } catch { return json({ error: 'Sign in again.' }, 401); }
   if (!isOwner(token)) return json({ error: 'Owner only.' }, 403);
   try {
+    if (queue) {
+      if (!github) return json({ items: queueLog([{ items: await queueLocal() }], now()) });
+      const from = sgtDate(now() - LOG_DAYS * 864e5);
+      const days = (await github.names('queue')).filter((/** @type {string} */ n) => /^\d{4}-\d\d-\d\d\.json$/.test(n) && n.slice(0, 10) >= from).sort().slice(-LOG_DAYS - 1);
+      const files = await Promise.all(days.map((/** @type {string} */ n) => github.read(`queue/${n}`)));
+      return json({ items: queueLog(files.map(f => f?.json), now()) });
+    }
     if (flags) {
       const rows = github ? (await github.read('flags.json'))?.json?.flags : await flagsLocal();
       return json({ flags: (rows || []).filter((/** @type {any} */ f) => f.status === 'open').map(flagCard) });
@@ -159,7 +196,7 @@ export async function handleFlush(request, { verify, admin: adm, firestore, gith
 
 export const flushRoute = {
   /** @param {URL} url */
-  match: url => url.pathname === '/api/flush' || url.pathname === '/api/flags',
+  match: url => url.pathname === '/api/flush' || url.pathname === '/api/flags' || url.pathname === '/api/queue',
   /** @param {Request} request @param {any} env @param {{ url: URL, local: boolean, project: string }} ctx */
   handle(request, env, { url, local, project }) {
     const emulator = !!(local && env.EMULATOR);
@@ -171,6 +208,10 @@ export const flushRoute = {
       flagsLocal: async () => {
         const r = await env.ASSETS.fetch(new Request(new URL('/e2e/fixtures/flags.json', url), { method: 'GET' }));
         return r.ok ? (await r.json()).flags : [];
+      },
+      queueLocal: async () => {
+        const r = await env.ASSETS.fetch(new Request(new URL('/e2e/fixtures/queue.json', url), { method: 'GET' }));
+        return r.ok ? (await r.json()).items : [];
       },
     });
   },
