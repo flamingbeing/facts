@@ -88,3 +88,7 @@ body { margin: 0; }
 .log-meta, .log-status { opacity: .75; }
 .log-badge { font-weight: 600; margin-right: .25rem; }
 .log-row[data-status="held"] .log-badge { color: var(--ui-danger, #b3261e); }
+.log-open { display: block; width: 100%; text-align: start; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; border-radius: .3rem; }
+.log-open:focus-visible { outline: 2px solid var(--ui-accent, currentColor); outline-offset: 2px; }
+.log-open > span { display: block; overflow-wrap: anywhere; }
+#log-detail-text { overflow-wrap: anywhere; }
