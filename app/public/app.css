@@ -37,8 +37,8 @@ body { margin: 0; }
 #align-find { display: block; width: 100%; box-sizing: border-box; margin: var(--gap) 0 .25rem; }
 .align-card { box-sizing: border-box; height: 100%; padding: var(--pad); border-radius: 1rem;
   background: var(--surface-2, var(--surface, transparent)); border: 1px solid var(--line, rgba(127, 127, 127, .25)); }
-.align-where { margin: 0 0 .5rem; opacity: .75; }
-.align-stem { font-size: 1.1rem; font-weight: 600; margin: .25rem 0 1rem; }
+.align-where { margin: 0 0 .25rem; opacity: .75; }
+.align-stem { font-size: 1.1rem; font-weight: 600; margin: .25rem 0 .75rem; }
 .align-options { display: grid; gap: .5rem; }
 .align-options button, .align-answers button, .align-show { width: 100%; text-align: left; min-height: var(--tap, 44px); }
 .align-options button.right { border-color: var(--success, #2e7d32); box-shadow: inset 4px 0 0 var(--success, #2e7d32); }
@@ -47,8 +47,8 @@ body { margin: 0; }
   transition: opacity .2s ease, transform .2s ease; }
 .align-card.answered .align-back { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
 .align-card.answered .align-show { display: none; }
-.align-line { font-size: 1.05rem; padding: .75rem; border-radius: .75rem; border-inline-start: 4px solid var(--accent); margin: 1rem 0; }
-.align-answer { font-weight: 600; margin: 1rem 0 0; }
+.align-line { font-size: 1.05rem; padding: .75rem; border-radius: .75rem; border-inline-start: 4px solid var(--accent); margin: .75rem 0; }
+.align-answer { font-weight: 600; margin: .75rem 0 0; }
 .align-answers { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
 .align-before { margin-top: .75rem; opacity: .7; }
 .align-note { margin: 0 0 .75rem; }
