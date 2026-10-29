@@ -71,7 +71,7 @@ test('Paste notes: a dump becomes a stack of cards; Confirm one, Discard one, Co
   await openAdd(page);
   await page.locator('#add-mode').click();
   await expect(page.locator('#add-mode')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '12000');
+  await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '30000');
   await page.locator('#add-text').fill('- Made-up first fact: dose 3 mg/kg\n- Made-up second fact\n\n- Made-up third fact\n- Made-up fourth fact');
   await page.locator('#add-file').click();
   const cards = page.locator('#add-cards .add-card');
@@ -105,4 +105,26 @@ test('Paste notes: a dump becomes a stack of cards; Confirm one, Discard one, Co
   // back to one fact
   await page.locator('#add-mode').click();
   await expect(page.locator('#add-text')).toHaveAttribute('maxlength', '1000');
+});
+
+test('Draft on a topic: cards are marked model-drafted, no Confirm all, and Confirm queues with q model-drafted', async ({ phone }) => {
+  const page = await phone();
+  await signIn(page, 'member');
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
+  await openAdd(page);
+  await page.locator('#add-model').click();
+  await expect(page.locator('#add-model')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#add-draft').click();
+  await expect(page.locator('#add-mode')).toBeHidden();
+  await page.locator('#add-text').fill('Made-up topic');
+  await page.locator('#add-file').click();
+  const cards = page.locator('#add-cards .add-card');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.nth(0)).toContainText('Model-drafted');
+  await expect(page.locator('#add-confirm-all')).toBeHidden();
+  const flushed = page.waitForResponse(r => r.url().endsWith('/api/flush'));
+  await cards.nth(0).locator('.add-c-confirm').click();
+  expect((await flushed).status()).toBe(200);
+  await expect.poll(async () => (await addVerdicts()).length, { timeout: 15_000 }).toBe(1);
+  expect((await addVerdicts()).find(v => v.q === 'model-drafted')).toMatchObject({ choice: 'add' });
 });

@@ -228,23 +228,34 @@ export async function start({ canReload = null }) {
     },
     // the Add tab: where a typed fact belongs and the line in house style (worker/file.js, owner only).
     // topics: [id, title, sections][] from the notes' data. -> { ok: filing } or { error }
-    /** @param {string} text @param {[string, string, string[]][]} topics @returns {Promise<{ filing?: any, error?: string }>} */
-    file: async (text, topics) => {
+    /** @param {string} text @param {[string, string, string[]][]} topics @param {string} [model]  'sonnet' (default) or 'haiku' @returns {Promise<{ filing?: any, error?: string }>} */
+    file: async (text, topics, model = 'sonnet') => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };
-        const r = await fetch('/api/file', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics }) });
+        const r = await fetch('/api/file', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics, model }) });
         const body = await r.json().catch(() => ({}));
         return r.ok ? { filing: body } : { error: body.error || `Refused (${r.status})` };
       } catch { return { error: 'Offline: try again.' }; }
     },
     // the Add tab's "Paste notes" mode: a pasted dump split into filings (worker/file-many.js, owner only).
-    /** @param {string} text @param {[string, string, string[]][]} topics @returns {Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>} */
-    fileMany: async (text, topics) => {
+    /** @param {string} text @param {[string, string, string[]][]} topics @param {string} [model] @returns {Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>} */
+    fileMany: async (text, topics, model = 'sonnet') => {
       try {
         const token = await fa.currentUser?.getIdToken();
         if (!token) return { error: 'Sign in first.' };
-        const r = await fetch('/api/file-many', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics }) });
+        const r = await fetch('/api/file-many', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics, model }) });
+        const body = await r.json().catch(() => ({}));
+        return r.ok ? { many: body } : { error: body.error || `Refused (${r.status})` };
+      } catch { return { error: 'Offline: try again.' }; }
+    },
+    // the Add tab's "Draft on a topic": the model writes candidate lines (worker/draft.js, owner only); each item is marked drafted.
+    /** @param {string} topic @param {[string, string, string[]][]} topics @param {string} [model] @returns {Promise<{ many?: { items: any[] }, error?: string }>} */
+    draft: async (topic, topics, model = 'sonnet') => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        if (!token) return { error: 'Sign in first.' };
+        const r = await fetch('/api/draft', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, topics, model }) });
         const body = await r.json().catch(() => ({}));
         return r.ok ? { many: body } : { error: body.error || `Refused (${r.status})` };
       } catch { return { error: 'Offline: try again.' }; }

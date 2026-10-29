@@ -9,6 +9,10 @@ import { verifyIdToken } from './claims.js';
 import { isOwner } from './flush.js';
 
 export const MODEL = 'claude-sonnet-5-5';
+/** the filing model he picks on the page: Sonnet (default) or the faster Haiku */
+export const MODELS = { sonnet: MODEL, haiku: 'claude-haiku-5-5' };
+/** @param {unknown} v */
+export const pickModel = v => MODELS[/** @type {'sonnet'|'haiku'} */ (v)] || MODEL;
 export const AREAS = ['drugs', 'regional', 'airway', 'comorbidities', 'procedures', 'physiology', 'equipment', 'crises', 'other'];
 const SLUG = /^[a-z][a-z0-9-]{0,60}$/;
 const MAX_TEXT = 1000, MAX_TOPICS = 2000;
@@ -59,11 +63,11 @@ export function filing(reply, text, known) {
   return { topic, section, line, isNew, ...(isNew ? { title: String(o?.title || '').trim().slice(0, 100) || slug.replace(/-/g, ' ') } : {}) };
 }
 
-/** @param {any} env @param {number} [maxTokens]  -> (prompt) => the model's text */
-export const anthropic = (env, maxTokens = 1500) => async (/** @type {string} */ p) => {
+/** @param {any} env @param {number} [maxTokens]  -> (prompt, model?) => the model's text */
+export const anthropic = (env, maxTokens = 1500) => async (/** @type {string} */ p, /** @type {string} */ model = MODEL) => {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: p }] }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'user', content: p }] }),
   });
   if (!r.ok) throw new Error(`anthropic ${r.status}`);
   // the reply can start with a non-text block (thinking); join every text block
@@ -116,7 +120,7 @@ export async function handleFile(request, { verify, ask, local = false }) {
   }
   if (!ask) return json({ error: 'Filing isn’t set up yet: the Worker needs its ANTHROPIC_API_KEY secret.' }, 503);
   try {
-    const reply = await ask(prompt(text, topics));
+    const reply = await ask(prompt(text, topics), pickModel(body?.model));
     const out = filing(reply, text, new Set(topics.map((/** @type {any[]} */ t) => t[0])));
     if (!out) console.error('file: reply not usable', String(reply).slice(0, 300));
     return out ? json(out) : json({ error: 'Couldn’t place that one. Try wording it differently.' }, 502);

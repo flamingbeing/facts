@@ -7,12 +7,14 @@ import { dataRoute } from './data.js';
 import { flushRoute } from './flush.js';
 import { fileRoute } from './file.js';
 import { fileManyRoute } from './file-many.js';
+import { draftRoute } from './draft.js';
 
 /** @type {{ match(url: URL): boolean, handle(request: Request, env: any, ctx: { url: URL, local: boolean, project: string }): Promise<Response> }[]} */
 export const ROUTES = [
   dataRoute,   // the app's own: facts and questions (data.js)
   flushRoute,  // the app's own: the owner's queue and flags (flush.js)
   fileRoute,   // the app's own: files a typed fact into a topic, owner only (file.js)
+  draftRoute, // the app's own: drafts lines on a topic he names, marked model-drafted (draft.js)
   fileManyRoute, // the app's own: files a pasted dump as many facts, owner only (file-many.js)
   // add: worker routes
 ];

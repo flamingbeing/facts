@@ -68,3 +68,10 @@ test('file: the model reply is read from its text blocks, thinking blocks first 
     }
   } finally { globalThis.fetch = real; }
 });
+
+test('file: the model he picks is passed on; anything else is Sonnet', async () => {
+  const seen = [];
+  const model = async (p, m) => { seen.push(m); return '{"topic":"other/x","section":"S","line":"A line"}'; };
+  for (const pick of ['haiku', 'sonnet', 'gpt', undefined]) await ask('own', { text: 'A line', topics: TOPICS, model: pick }, { ask: model });
+  assert.deepEqual(seen, ['claude-haiku-5-5', MODEL, MODEL, MODEL]);
+});
