@@ -238,6 +238,17 @@ export async function start({ canReload = null }) {
         return r.ok ? { filing: body } : { error: body.error || `Refused (${r.status})` };
       } catch { return { error: 'Offline: try again.' }; }
     },
+    // the Add tab's "Paste notes" mode: a pasted dump split into filings (worker/file-many.js, owner only).
+    /** @param {string} text @param {[string, string, string[]][]} topics @returns {Promise<{ many?: { items: any[], cut: boolean, skipped: number }, error?: string }>} */
+    fileMany: async (text, topics) => {
+      try {
+        const token = await fa.currentUser?.getIdToken();
+        if (!token) return { error: 'Sign in first.' };
+        const r = await fetch('/api/file-many', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ text, topics }) });
+        const body = await r.json().catch(() => ({}));
+        return r.ok ? { many: body } : { error: body.error || `Refused (${r.status})` };
+      } catch { return { error: 'Offline: try again.' }; }
+    },
     // the open flags, for the owner's flag cards (worker/flush.js); anyone else gets none
     /** @returns {Promise<import('./cards.js').Flag[]>} */
     flags: async () => {

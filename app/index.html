@@ -124,9 +124,12 @@
       </section>
       <section class="ui-screen ui-tab-page" id="add-page" aria-labelledby="add-title" hidden>
         <h1 class="ui-large-title" id="add-title">Add</h1>
-        <label for="add-text">A fact, in your own words</label>
+        <label for="add-text" id="add-text-label">A fact, in your own words</label>
         <textarea id="add-text" rows="4" maxlength="1000" placeholder="e.g. Dobutamine can be given peripherally for a short time"></textarea>
-        <div class="row"><button type="button" id="add-file">File it</button></div>
+        <div class="row">
+          <button type="button" id="add-file">File it</button>
+          <button type="button" id="add-mode" aria-pressed="false">Paste notes</button>
+        </div>
         <p id="add-status" class="small" role="status"></p>
         <div id="add-card" class="add-card" hidden>
           <p id="add-new" class="small" hidden></p>
@@ -142,6 +145,13 @@
             <button type="button" id="add-confirm">Confirm</button>
             <button type="button" id="add-discard">Discard</button>
           </div>
+        </div>
+        <div id="add-stack" hidden>
+          <div class="row">
+            <button type="button" id="add-confirm-all">Confirm all</button>
+            <button type="button" id="add-discard-all">Discard all</button>
+          </div>
+          <div id="add-cards"></div>
         </div>
       </section>
       <section class="ui-screen ui-tab-page" id="log-page" aria-labelledby="log-title" hidden>

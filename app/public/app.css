@@ -48,6 +48,8 @@ body { margin: 0; }
 #add-page textarea, #add-page input { width: 100%; box-sizing: border-box; font: inherit; padding: .5rem; margin-bottom: .6rem; }
 #add-page .row { display: flex; gap: .6rem; margin: .4rem 0 .8rem; }
 .add-card { margin-top: .8rem; }
+#add-cards .add-card { border-top: 1px solid var(--ui-line, rgba(128, 128, 128, .35)); padding-top: .6rem; }
+#add-cards .add-card.is-working { opacity: .6; }
 
 /* Test (screens/test.js): the cards are Align's (.align-*); only the page frame, search, score and flag button are its own. */
 #test-page > :not(.ui-large-title) { max-width: 40rem; margin-inline: auto; padding-inline: var(--pad); }
