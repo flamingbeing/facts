@@ -9,6 +9,10 @@
 // it is saved as 'seen', which the flush skips, so it never reaches the queue. Sent: the owner's queue has it (the
 // same fact and time); the queue is read again before the sheet opens. Every write is a verdict (app.verdict, the
 // sync module's write queue); the owner's go to the queue a little later (app.flush), as on Align.
+// Merge now (the owner): runs the notes' queue processor at once (app.process, worker/process.js) with Sonnet or Opus
+// (remembered on this device). The line under it says how many are queued, then Starting / Running, then the pull
+// request, the counts and what the run cost, or that it failed (with the run's page). It checks every 15 s while a
+// run is going and the page is in view.
 import { toaster } from '@core/ui';
 import { loadData } from '../data.js';
 import { cardsFrom, plain, WRONG } from '../cards.js';
@@ -30,12 +34,14 @@ const LIMIT = 100;   // rows drawn in the list
 const FLUSH_AFTER = 15000;
 // the answers whose text is the line he wants: an edit in place keeps them (the others become an 'edit')
 const TEXTS = ['repo-wrong', 'edit', 'add', 'flag'];
+const MODEL_KEY = 'log.model';
+const POLL = 15000;
 
 /** @param {number} at -> 'Thu 29 Oct, 14:05' in Singapore time */
 const when = at => new Date(at).toLocaleString('en-SG', { timeZone: 'Asia/Singapore', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
 
 /**
- * @param {{ queue: () => Promise<QueueItem[] | null>, flush: () => Promise<string>,
+ * @param {{ queue: () => Promise<QueueItem[] | null>, flush: () => Promise<string>, process: (model?: 'sonnet' | 'opus') => Promise<any>,
  *   verdict: (fact: string, choice: string, text: string, base: Verdict | null, q?: string, section?: string, change?: { old?: string, why?: string }) => Promise<string> }} app
  * @returns {{ state: (s: import('../state.js').State) => void, verdicts: (list: Verdict[]) => void }}
  */
@@ -86,6 +92,7 @@ export function logScreen(app) {
 
   const drawQueue = () => {
     $('log-queue-block').hidden = !owner;
+    drawMerge();
     if (!owner) { $('log-queue').replaceChildren(); return; }
     $('log-queue-empty').hidden = !items || !!items.length;
     $('log-queue-status').textContent = items ? '' : 'Loading…';
@@ -108,6 +115,73 @@ export function logScreen(app) {
 
   const draw = () => { drawVerdicts(); drawQueue(); };
 
+  // Merge now: the latest run (null: none yet), the run seen when he pressed it (until a newer one shows, it is starting)
+  /** @type {{ run: any, last: any } | null} */
+  let proc = null;
+  /** @type {number | null | undefined} */
+  let pressed;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let pollTimer;
+  /** @type {'sonnet' | 'opus'} */
+  let model = 'sonnet';
+  try { if (localStorage.getItem(MODEL_KEY) === 'opus') model = 'opus'; } catch { /* no storage: Sonnet */ }
+  const going = () => pressed !== undefined || (proc?.run && proc.run.status !== 'completed');
+  /** @param {string} text @param {string} [href] @param {string} [link] */
+  const say = (text, href, link) => {
+    const p = $('log-merge-status');
+    p.replaceChildren(text);
+    if (href) { const a = /** @type {HTMLAnchorElement} */ (el('a', '', link)); a.href = href; a.target = '_blank'; a.rel = 'noopener'; p.append(' ', a); }
+  };
+  const drawMerge = () => {
+    $('log-merge-block').hidden = !owner;
+    if (!owner) return;
+    $('log-merge-model').textContent = model === 'opus' ? 'Model: Opus' : 'Model: Sonnet';
+    $('log-merge-model').setAttribute('aria-pressed', String(model === 'opus'));
+    const queued = (items || []).filter(i => i.status === 'queued').length;
+    const now = going();
+    /** @type {HTMLButtonElement} */ ($('log-merge-now')).disabled = !!now || !items || !queued;
+    const run = proc?.run, last = proc?.last;
+    if (pressed !== undefined) return say('Starting…');
+    if (run && run.status !== 'completed') return say(run.status === 'queued' ? 'Waiting for a runner…' : 'Running… (a few minutes)', run.url, 'Run');
+    const tail = items ? `${queued} queued.` : '';
+    if (run && run.conclusion && run.conclusion !== 'success') return say(`Last run failed. ${tail}`, run.url, 'Run log');
+    if (run && last?.run_id === run.id) {
+      const cost = typeof last.cost_usd === 'number' ? ` · $${last.cost_usd.toFixed(2)}` : '';
+      const text = `Last run: ${last.done} done, ${last.held} held${last.left ? `, ${last.left} left` : ''}${cost}. ${tail}`;
+      return last.pr ? say(text, last.pr, 'Pull request') : say(text);
+    }
+    say(tail);
+  };
+
+  // reads the latest run; while one is going (or starting), again in a while, if the Log is still in view
+  const check = async () => {
+    clearTimeout(pollTimer);
+    if (!owner) return;
+    const r = await app.process();
+    if (r && !r.error) {
+      const was = proc?.run;
+      proc = { run: r.run, last: r.last };
+      if (pressed !== undefined && r.run && r.run.id !== pressed) pressed = undefined;   // the new run shows
+      if (was && was.status !== 'completed' && r.run?.status === 'completed') void app.queue().then(q => { if (q) { items = q; drawQueue(); } });
+    }
+    drawMerge();
+    if (going() && !document.hidden && !$('log-page').hidden) pollTimer = setTimeout(() => void check(), POLL);
+  };
+  $('log-merge-now').addEventListener('click', async () => {
+    pressed = proc?.run?.id ?? null;
+    drawMerge();
+    const r = await app.process(model);
+    if (r?.error) { pressed = undefined; drawMerge(); toasts.show(r.error); return; }
+    if (!r.started) pressed = undefined;   // one was already going: it takes these too
+    pollTimer = setTimeout(() => void check(), r.started ? 4000 : 0);
+  });
+  $('log-merge-model').addEventListener('click', () => {
+    model = model === 'opus' ? 'sonnet' : 'opus';
+    try { localStorage.setItem(MODEL_KEY, model); } catch { /* no storage: this visit only */ }
+    drawMerge();
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && owner && seen && going()) void check(); });
+
   // the notes' lines name the answers that carry no text; fetched the first time the tab is opened
   const open = () => {
     if (!ready) return;
@@ -122,6 +196,7 @@ export function logScreen(app) {
       }).catch(() => { loaded = false; });
     }
     if (owner) void app.queue().then(q => { if (q) { items = q; drawQueue(); } else if (!items) $('log-queue-status').textContent = 'Couldn’t load the queue. Open the tab again.'; });
+    if (owner) void check();
   };
   document.querySelectorAll('[data-tab-page="#log-page"]').forEach(t => t.addEventListener('click', open));
 
@@ -207,7 +282,7 @@ export function logScreen(app) {
       owner = ready && s.role === 'admin';
       canWrite = ready && (s.role === 'admin' || s.role === 'member');
       for (const id of ['tab-log', 'side-log']) $(id).hidden = !ready;
-      if (!ready) { mine = []; items = null; loaded = false; seen = false; }
+      if (!ready) { mine = []; items = null; loaded = false; seen = false; proc = null; pressed = undefined; clearTimeout(pollTimer); }
       if (owner !== was) { if (!owner) items = null; drawQueue(); }
     },
     verdicts(list) { mine = list; drawVerdicts(); },

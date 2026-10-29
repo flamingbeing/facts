@@ -148,6 +148,13 @@
       </section>
       <section class="ui-screen ui-tab-page" id="log-page" aria-labelledby="log-title" hidden>
         <h1 class="ui-large-title" id="log-title">Log</h1>
+        <div id="log-merge-block" hidden>
+          <div class="row">
+            <button type="button" id="log-merge-now">Merge now</button>
+            <button type="button" id="log-merge-model" class="small" aria-pressed="false" title="Sonnet does the usual queue; Opus is for a hard one and costs more">Model: Sonnet</button>
+          </div>
+          <p id="log-merge-status" class="small" role="status"></p>
+        </div>
         <div id="log-filter" class="align-chips" role="group" aria-label="Show">
           <button type="button" class="chip" data-filter="changes" aria-pressed="true">Changes only</button>
           <button type="button" class="chip" data-filter="all" aria-pressed="false">All</button>

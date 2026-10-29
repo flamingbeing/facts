@@ -457,3 +457,42 @@ test('the owner sees the queue: newest first, each queued, done (with the pull r
   await expect(rows.nth(3)).toContainText('flagged F0012');
   await expect(rows.nth(3).getByRole('link')).toHaveCount(0);
 });
+
+test('Merge now: the queued count and the last run; Opus is remembered; a press starts a run, then a failed run links its log', async ({ phone }) => {
+  const page = await phone();
+  const pr = 'https://github.com/example/notes/pull/7', runs = 'https://github.com/example/notes/actions/runs/';
+  let state = { run: { id: 1, status: 'completed', conclusion: 'success', url: runs + 1, at: 1 }, last: { run_id: 1, done: 3, held: 1, left: 0, pr, cost_usd: 0.4234 } };
+  const posts = [];
+  await page.route('**/api/process', route => {
+    const r = route.request();
+    if (r.method() === 'POST') {
+      posts.push(r.postDataJSON());
+      state = { run: { id: 2, status: 'in_progress', conclusion: null, url: runs + 2, at: 2 }, last: state.last };
+      return route.fulfill({ json: { ok: true, started: true } });
+    }
+    return route.fulfill({ json: state });
+  });
+  await signIn(page, 'member');
+  await expect(page.locator('#log-merge-block')).toBeHidden();
+  await page.evaluate(e => window.starter.signInAs(e), DEFAULT_ADMINS[0]);
+  await expect(page.locator('#tab-log')).toBeVisible();
+  await openLog(page);
+  const status = page.locator('#log-merge-status'), now = page.getByRole('button', { name: 'Merge now' });
+  await expect(status).toHaveText('Last run: 3 done, 1 held · $0.42. 1 queued. Pull request');
+  await expect(status.getByRole('link', { name: 'Pull request' })).toHaveAttribute('href', pr);
+  await expect(now).toBeEnabled();
+  await page.locator('#log-merge-model').click();
+  await expect(page.locator('#log-merge-model')).toHaveText('Model: Opus');
+  expect(await page.evaluate(() => localStorage.getItem('log.model'))).toBe('opus');
+  await now.click();
+  await expect(status).toHaveText(/^(Starting…|Running… \(a few minutes\) Run)$/);
+  await expect(status).toHaveText('Running… (a few minutes) Run');
+  await expect(now).toBeDisabled();
+  expect(posts).toEqual([{ model: 'opus' }]);
+  state = { run: { id: 2, status: 'completed', conclusion: 'failure', url: runs + 2, at: 2 }, last: state.last };
+  await page.locator('.ui-tab[data-tab-page="#align-page"]:visible, .ui-side-link[data-tab-page="#align-page"]:visible').first().click();
+  await openLog(page);
+  await expect(status).toHaveText('Last run failed. 1 queued. Run log');
+  await expect(status.getByRole('link', { name: 'Run log' })).toHaveAttribute('href', runs + 2);
+  await expect(now).toBeEnabled();
+});
