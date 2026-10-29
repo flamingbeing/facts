@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
-      - uses: flamingbeing/app-devkit/setup-tools@v1.13.7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: flamingbeing/app-devkit/setup-node@v1.11.0
+      - uses: flamingbeing/app-devkit/setup-tools@v1.11.0
       - run: node .devkit/tools/check.mjs
       - run: node .devkit/tools/proofread.mjs
       - run: node .devkit/tools/check-links.mjs .
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: gitleaks (pinned release, checksum checked)
@@ -66,11 +66,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: flamingbeing/app-devkit/setup-node@v1.11.0
         with:
           install: 'false'
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.11.0
         with:
           firebase-tools-version: '15.33.0'   # Firestore emulator v1.22 (playwright.config.mjs)
           emulators: firestore
