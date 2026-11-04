@@ -10,10 +10,9 @@ body { margin: 0; }
 @media (min-width: 600px) { .toasts { bottom: var(--pad); } }
 
 
-/* the app's icon beside its name in the side bar, and large on the signed-out screen */
+/* the app's icon beside its name in the side bar */
 .ui-sidebar-name { display: flex; align-items: center; gap: .5rem; }
 .app-mark { flex: none; border-radius: 22%; }
-.app-mark-big { display: block; margin: var(--pad) 0 var(--gap); }
 
 /* Align (screens/align.js): area chips, search, and one card at a time (the kit's cardPager). The back of a card (the
    line as the notes have it and the answers) comes in with opacity and transform only, run by the compositor. */
@@ -93,3 +92,4 @@ body { margin: 0; }
 .log-open:focus-visible { outline: 2px solid var(--ui-accent, currentColor); outline-offset: 2px; }
 .log-open > span { display: block; overflow-wrap: anywhere; }
 #log-detail-text { overflow-wrap: anywhere; }
+#signed-out { min-height: 1px; }   /* (the kit's sign-in screen is fixed, so the section needs a box to count as shown) */
