@@ -12,12 +12,12 @@ test('the device value survives sign-out and a reload', async ({ phone }) => {
   await a.getByLabel('Bars and sheets').selectOption('solid');
   await expect(a.locator('html')).not.toHaveClass(/\bglass\b/);
   await a.click('#sign-out');
-  await openAlign(a);
   await expect(a.locator('#signed-out')).toBeVisible();
   await a.reload({ waitUntil: 'domcontentloaded' });
   await expect(a.locator('#signed-out')).toBeVisible();
   await expect(a.locator('html')).not.toHaveClass(/\bglass\b/);
   await a.evaluate(e => window.starter.signInAs(e), email);
+  await openAlign(a);   // (signed back in on the tab left open: Settings)
   await expect(a.locator('#align-count')).toBeVisible();
   await expect(a.locator('html')).not.toHaveClass(/\bglass\b/);
 });
