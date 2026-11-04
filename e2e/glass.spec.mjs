@@ -24,7 +24,7 @@ const glassLook = page => page.getByRole('combobox', { name: 'Look', exact: true
 
 test('glass by default; Solid in the switch takes it off, kept on reload and before the modules run', async ({ phone }) => {
   const page = await phone();
-  await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await signIn(page, 'member');   // (signed out, the sign-in screen covers the tabs)
   await openSettings(page);
   await glassLook(page);
   const root = page.locator('html');
@@ -58,7 +58,7 @@ test('glass by default; Solid in the switch takes it off, kept on reload and bef
 // (Playwright can't emulate prefers-reduced-transparency; glass.css turns glass down for it in the same query)
 test('asked for more contrast: solid card colour, no blur', async ({ phone }) => {
   const page = await phone();
-  await page.goto(APP, { waitUntil: 'domcontentloaded' });
+  await signIn(page, 'member');   // (signed out, the sign-in screen covers the tabs)
   await openSettings(page);
   await glassLook(page);
   await page.emulateMedia({ contrast: 'more' });

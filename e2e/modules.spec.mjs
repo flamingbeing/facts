@@ -57,7 +57,7 @@ test('forget this device: refused while unsent, then wipes the phone', async ({ 
 
 test('check for updates: a new version takes over at once', async ({ phone }) => {
   const page = await phone();
-  await page.goto(APP + '&sw', { waitUntil: 'domcontentloaded' });
+  await signIn(page, 'member', { path: APP + '&sw' });   // (signed out, the sign-in screen covers the tabs)
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller), { timeout: 30_000 }).toBe(true);
   await page.evaluate(() => { window.__same = true; });
   await page.request.get('/__test/bump');
