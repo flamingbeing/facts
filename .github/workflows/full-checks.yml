@@ -36,7 +36,7 @@ jobs:
 
   vite:
     # the whole browser suite on the Vite build (dist/)
-    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.14.0
+    uses: flamingbeing/app-devkit/.github/workflows/e2e.yml@v1.16.0
     with:
       name: vite-full
       shards: 3
