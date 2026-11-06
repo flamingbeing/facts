@@ -15,12 +15,12 @@ const sha = buf => crypto.createHash('sha256').update(buf).digest('hex');
 const STAMP = /-(\d{4}-\d{2}-\d{2}-)?[0-9a-f]{8}$/;
 // only an exact-version address on core.anawj.com never changes; any other cross-site file (e.g. design.anawj.com/v1/)
 // may change under the same address, so it gets a new hash every deploy and the phones fetch it again
-const PINNED = /^https:\/\/core\.anawj\.com\/[a-z0-9-]+\/\d+\.\d+\.\d+\//;
+const PINNED = /^https:\/\/core\.anawj\.com\/[a-z0-9-]+\/\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?\//;   // a pre-release too (ui/1.0.0-rc.108/)
 const sgtDay = t => new Date(new Date(t).getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+const inDir = (dir, rel) => { const f = path.join(dir, rel); return fs.existsSync(f) ? f : path.join(dir, 'public', rel); };
 const lastChange = dir => { try { return execFileSync('git', ['log', '-1', '--format=%cI', '--', '.'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null; } catch (e) { return null; } };
 
 // now, gitDate: for tests (gitDate: the last git change of dir as ISO, null for none)
-const inDir = (dir, rel) => { const f = path.join(dir, rel); return fs.existsSync(f) ? f : path.join(dir, 'public', rel); };
 export function stamp({ dir, sw = 'sw.js', date, write = true, now = Date.now(), gitDate }) {
   const swPath = inDir(dir, sw);
   let src = fs.readFileSync(swPath, 'utf8');
@@ -32,7 +32,7 @@ export function stamp({ dir, sw = 'sw.js', date, write = true, now = Date.now(),
   const shell = [...shellSrc.matchAll(/'([^']+)'/g)].map(m => m[1]);
   const manifest = {};
   for (const u of shell) {
-    if (PINNED.test(u)) { manifest[u] = 'pinned'; continue; }   // an exact-pin address (core.anawj.com/update/0.2.0/...): its version is its identity
+    if (PINNED.test(u)) { manifest[u] = 'pinned'; continue; }   // an exact-pin address (core.anawj.com/ui/1.0.0-rc.108/update/...): its version is its identity
     if (/^https?:\/\//.test(u)) { manifest[u] = sha(`${u} ${now}`).slice(0, 12); continue; }   // mutable: per deploy
     const at = u === './' ? '' : u.split('?')[0].split('#')[0];
     const rel = at === '' || at.endsWith('/') ? `${at}index.html` : at;   // a page by its folder: its index.html
